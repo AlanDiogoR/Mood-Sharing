@@ -25,8 +25,8 @@ Um aplicativo React Native que permite que casais compartilhem seus estados emoc
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/seu-usuario/mood-sharing-app.git
-cd mood-sharing-app
+git clone https://github.com/seu-usuario/mood-sharing.git
+cd mood-sharing
 ```
 
 2. Instale as dependências:
@@ -182,9 +182,9 @@ yarn test
 
 Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
 
-## 👥 Autores
+## 👥 Autor
 
-- Seu Nome - [@seu-usuario](https://github.com/seu-usuario)
+- Alan Diogo - (https://github.com/alanDiogoR)
 
 ## 🙏 Agradecimentos
 
@@ -193,4 +193,4 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalh
 
 ## 📞 Suporte
 
-Para suporte, abra uma issue no GitHub ou entre em contato através do email: seu-email@exemplo.com
+Para suporte, abra uma issue no GitHub ou entre em contato através do email:alandiogor@gmail.com
