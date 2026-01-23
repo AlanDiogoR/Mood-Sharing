@@ -1,0 +1,66 @@
+{
+  "expo": {
+    "name": "Mood Sharing",
+    "slug": "mood-sharing-app",
+    "version": "1.0.0",
+    "sdkVersion": "54.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0d1117"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.moodsharing.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Precisamos da sua localização para mostrar quando você está próximo do seu parceiro",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Precisamos da sua localização em background para detectar proximidade",
+        "NSLocationAlwaysUsageDescription": "Precisamos da sua localização em background para detectar proximidade"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0d1117"
+      },
+      "package": "com.moodsharing.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "RECEIVE_BOOT_COMPLETED"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Precisamos da sua localização em background para detectar proximidade"
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Permitir uso do Face ID para desbloquear o app"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
+      },
+      "API_BASE_URL": "http://191.37.43.39:3001/api",
+      "MONGODB_URI": "mongodb+srv://alandiogor_db_user:vEdWjEc6o4GmghTp@cluster0.nvlz1pz.mongodb.net/?appName=Cluster0",
+      "EXPO_PROJECT_ID": "your-expo-project-id"
+    }
+  }
+}
