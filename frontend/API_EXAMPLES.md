@@ -5,7 +5,7 @@ Este documento descreve os endpoints que o backend deve implementar para que o a
 ## Base URL
 
 ```
-mongodb+srv://<alandiogor_db_user>:<vEdWjEc6o4GmghTp>@cluster0.nvlz1pz.mongodb.net/?appName=Cluster0
+mongodb+srv://<alanser>:<vEdWjEcGmghTp>@cluster0.nvlz1pz.mongodb.net/?appName=Cluster0
 ```
 
 ## Autenticação

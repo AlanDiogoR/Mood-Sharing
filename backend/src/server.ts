@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import {connectDatabase} from './config/database';
+import { connectDatabase } from './config/database';
 import authRoutes from './routes/authRoutes';
 import moodRoutes from './routes/moodRoutes';
 
@@ -15,13 +15,30 @@ const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(helmet());
-app.use(cors({
-  origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:19006', 'http://localhost:8081'],
+// Configuração de CORS mais permissiva para desenvolvimento
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Em desenvolvimento, permite todas as origens (incluindo Expo Go)
+    if (process.env.NODE_ENV === 'development') {
+      callback(null, true);
+      return;
+    }
+
+    // Em produção, verifica as origens permitidas
+    const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || [];
+    if (!origin || allowedOrigins.includes(origin) || origin.startsWith('exp://')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
-}));
+};
+
+app.use(cors(corsOptions));
 app.use(morgan('dev'));
 app.use(express.json());
-app.use(express.urlencoded({extended: true}));
+app.use(express.urlencoded({ extended: true }));
 
 // Health check
 app.get('/health', (req, res) => {
@@ -61,7 +78,7 @@ const startServer = async () => {
       console.log(`🚀 Servidor rodando na porta ${PORT}`);
       console.log(`📍 Health check: http://localhost:${PORT}/health`);
       console.log(`📡 API: http://localhost:${PORT}/api`);
-      console.log(`🌐 Acessível externamente em: http://191.37.43.39:${PORT}/api`);
+      console.log(`🌐 Acessível externamente em: http://192.168.0.16:${PORT}/api`);
     });
   } catch (error) {
     console.error('❌ Erro ao iniciar servidor:', error);

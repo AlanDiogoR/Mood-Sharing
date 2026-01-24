@@ -2,7 +2,7 @@ import React, {createContext, useContext, useState, useEffect, ReactNode} from '
 import {Mood, MoodType, Location} from '../types';
 import {moodService} from '../services/moodService';
 import {locationService} from '../services/locationService';
-import {notificationService} from '../services/notificationService';
+import {notificationService} from '../services/notificationServiceWrapper';
 import {calculateDistance, isWithinProximity} from '../utils/distance';
 import {CONFIG} from '../constants/config';
 import {useAuth} from './authContext';

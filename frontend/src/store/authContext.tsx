@@ -57,14 +57,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
   };
 
   const login = async (credentials: LoginCredentials) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/8bb25667-25ae-441d-ae7c-2d3a6dd7c850',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authContext.tsx:59',message:'login function called',data:{email:credentials.email},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     setIsLoading(true);
     try {
       const response = await authService.login(credentials);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/8bb25667-25ae-441d-ae7c-2d3a6dd7c850',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authContext.tsx:63',message:'login response in context',data:{success:response.success,hasData:!!response.data,error:response.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       if (response.success && response.data) {
         setUser(response.data.user);
       } else {
         throw new Error(response.error || 'Erro ao fazer login');
       }
+    } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/8bb25667-25ae-441d-ae7c-2d3a6dd7c850',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authContext.tsx:68',message:'login error caught',data:{errorMessage:error?.message,errorType:error?.constructor?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      throw error;
     } finally {
       setIsLoading(false);
     }

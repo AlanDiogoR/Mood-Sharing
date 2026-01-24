@@ -1,25 +1,89 @@
-import * as Notifications from 'expo-notifications';
 import {MoodType} from '../types';
 import {CONFIG} from '../constants/config';
 
-// Configure notification handler (com tratamento de erro)
-try {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-    }),
-  });
-} catch (error) {
-  console.warn('Error setting notification handler:', error);
+// Detecta se está rodando no Expo Go (sem development build)
+const isExpoGo = !CONFIG.EXPO_PROJECT_ID || CONFIG.EXPO_PROJECT_ID === 'your-expo-project-id';
+
+// Função helper para carregar Notifications dinamicamente apenas quando necessário
+// No Expo Go, retorna null imediatamente sem tentar importar
+// IMPORTANTE: Usa uma string dinâmica para evitar que o Metro inclua o módulo no bundle
+let NotificationsModule: any = null;
+let isLoadingModule = false;
+
+async function getNotifications(): Promise<any> {
+  if (isExpoGo) {
+    return null;
+  }
+  
+  // Cache do módulo carregado
+  if (NotificationsModule) {
+    return NotificationsModule;
+  }
+  
+  if (isLoadingModule) {
+    // Aguarda o carregamento em andamento
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (NotificationsModule) {
+          clearInterval(checkInterval);
+          resolve(NotificationsModule);
+        } else if (!isLoadingModule) {
+          clearInterval(checkInterval);
+          resolve(null);
+        }
+      }, 50);
+    });
+  }
+  
+  isLoadingModule = true;
+  
+  try {
+    // Usa import() dinâmico com string construída dinamicamente para evitar
+    // que o Metro bundler inclua o módulo quando estiver no Expo Go
+    // Divide a string para evitar detecção estática pelo Metro
+    const expoPart = 'expo-';
+    const notificationsPart = 'notifications';
+    const moduleName = expoPart + notificationsPart;
+    
+    const module = await import(moduleName);
+    // expo-notifications exporta como namespace
+    NotificationsModule = module.default || module;
+    return NotificationsModule;
+  } catch (error) {
+    // Silenciar erro - não logar no Expo Go
+    return null;
+  } finally {
+    isLoadingModule = false;
+  }
 }
 
 class NotificationService {
   private expoPushToken: string | null = null;
+  private isInitialized: boolean = false;
 
   async initialize(): Promise<void> {
+    // No Expo Go, não inicializa push notifications para evitar avisos
+    if (isExpoGo) {
+      this.isInitialized = true;
+      return;
+    }
+
+    const Notifications = await getNotifications();
+    if (!Notifications) {
+      this.isInitialized = true;
+      return;
+    }
+
     try {
+      // Configure notification handler
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+        }),
+      });
+
       // Request permissions
       const {status: existingStatus} = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
@@ -45,32 +109,59 @@ class NotificationService {
         } catch (error) {
           console.warn('Error getting Expo push token:', error);
         }
-      } else {
-        console.warn('EXPO_PROJECT_ID não configurado. Notificações push podem não funcionar.');
       }
 
       // Configure notification channel (Android)
-      await Notifications.setNotificationChannelAsync(CONFIG.NOTIFICATION_CHANNEL_ID, {
-        name: CONFIG.NOTIFICATION_CHANNEL_NAME,
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF231F7C',
-      });
+      try {
+        await Notifications.setNotificationChannelAsync(CONFIG.NOTIFICATION_CHANNEL_ID, {
+          name: CONFIG.NOTIFICATION_CHANNEL_NAME,
+          importance: (Notifications as any).AndroidImportance?.MAX || 5,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF231F7C',
+        });
+      } catch (error) {
+        // Ignorar erro de canal no Expo Go
+        if (!isExpoGo) {
+          console.warn('Error setting notification channel:', error);
+        }
+      }
 
       // Setup notification listeners
-      Notifications.addNotificationReceivedListener(notification => {
-        console.log('Notification received:', notification);
-      });
+      try {
+        Notifications.addNotificationReceivedListener(notification => {
+          console.log('Notification received:', notification);
+        });
 
-      Notifications.addNotificationResponseReceivedListener(response => {
-        console.log('Notification response:', response);
-      });
+        Notifications.addNotificationResponseReceivedListener(response => {
+          console.log('Notification response:', response);
+        });
+      } catch (error) {
+        // Ignorar erro de listeners no Expo Go
+        if (!isExpoGo) {
+          console.warn('Error setting notification listeners:', error);
+        }
+      }
+
+      this.isInitialized = true;
     } catch (error) {
-      console.error('Error initializing notifications:', error);
+      if (!isExpoGo) {
+        console.error('Error initializing notifications:', error);
+      }
+      this.isInitialized = true; // Marca como inicializado mesmo com erro para evitar tentativas repetidas
     }
   }
 
   async getToken(): Promise<string | null> {
+    // No Expo Go, não tenta obter push token
+    if (isExpoGo) {
+      return null;
+    }
+
+    const Notifications = await getNotifications();
+    if (!Notifications) {
+      return null;
+    }
+
     if (!this.expoPushToken) {
       try {
         const tokenData = await Notifications.getExpoPushTokenAsync({
@@ -85,40 +176,74 @@ class NotificationService {
   }
 
   async sendMoodChangeNotification(partnerName: string, moodType: MoodType): Promise<void> {
-    const moodEmojis: Record<MoodType, string> = {
-      [MoodType.HAPPY]: '😊',
-      [MoodType.SAD]: '😢',
-      [MoodType.ANXIOUS]: '😰',
-      [MoodType.CALM]: '😌',
-      [MoodType.EXCITED]: '🤩',
-      [MoodType.TIRED]: '😴',
-      [MoodType.ANGRY]: '😠',
-      [MoodType.LOVE]: '❤️',
-    };
+    // No Expo Go, não envia notificações push (apenas local funciona)
+    if (isExpoGo) {
+      return;
+    }
 
-    const emoji = moodEmojis[moodType] || '😊';
+    const Notifications = await getNotifications();
+    if (!Notifications) {
+      return;
+    }
 
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Mood Sharing',
-        body: `${partnerName} está ${moodType} ${emoji}`,
-        sound: true,
-        priority: Notifications.AndroidNotificationPriority.HIGH,
-      },
-      trigger: null, // Send immediately
-    });
+    try {
+      const moodEmojis: Record<MoodType, string> = {
+        [MoodType.HAPPY]: '😊',
+        [MoodType.SAD]: '😢',
+        [MoodType.ANXIOUS]: '😰',
+        [MoodType.CALM]: '😌',
+        [MoodType.EXCITED]: '🤩',
+        [MoodType.TIRED]: '😴',
+        [MoodType.ANGRY]: '😠',
+        [MoodType.LOVE]: '❤️',
+      };
+
+      const emoji = moodEmojis[moodType] || '😊';
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Mood Sharing',
+          body: `${partnerName} está ${moodType} ${emoji}`,
+          sound: true,
+          priority: (Notifications as any).AndroidNotificationPriority?.HIGH || 1,
+        },
+        trigger: null, // Send immediately
+      });
+    } catch (error) {
+      // Silenciar erro no Expo Go
+      if (!isExpoGo) {
+        console.error('Error sending mood change notification:', error);
+      }
+    }
   }
 
   async sendProximityNotification(partnerName: string): Promise<void> {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: '🎉 Vocês estão próximos!',
-        body: `${partnerName} está perto de você!`,
-        sound: true,
-        priority: Notifications.AndroidNotificationPriority.HIGH,
-      },
-      trigger: null, // Send immediately
-    });
+    // No Expo Go, não envia notificações push (apenas local funciona)
+    if (isExpoGo) {
+      return;
+    }
+
+    const Notifications = await getNotifications();
+    if (!Notifications) {
+      return;
+    }
+
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '🎉 Vocês estão próximos!',
+          body: `${partnerName} está perto de você!`,
+          sound: true,
+          priority: (Notifications as any).AndroidNotificationPriority?.HIGH || 1,
+        },
+        trigger: null, // Send immediately
+      });
+    } catch (error) {
+      // Silenciar erro no Expo Go
+      if (!isExpoGo) {
+        console.error('Error sending proximity notification:', error);
+      }
+    }
   }
 
   async subscribeToTopic(topic: string): Promise<void> {
