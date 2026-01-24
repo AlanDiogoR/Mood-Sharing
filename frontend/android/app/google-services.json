@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "538084722310",
+    "project_id": "mood-sharing",
+    "storage_bucket": "mood-sharing.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:538084722310:android:fcd3a0af5e06d793373307",
+        "android_client_info": {
+          "package_name": "com.moodsharing.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBopf7SOMFkWaIoiY6WIX8ZxV0I5IgclIE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { connectDatabase } from './config/database';
+import { initializeFirebaseAdmin } from './services/firebaseAdmin';
 import authRoutes from './routes/authRoutes';
 import moodRoutes from './routes/moodRoutes';
 
@@ -74,6 +75,10 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 const startServer = async () => {
   try {
     await connectDatabase();
+
+    // Inicializa Firebase Admin
+    initializeFirebaseAdmin();
+
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Servidor rodando na porta ${PORT}`);
       console.log(`📍 Health check: http://localhost:${PORT}/health`);

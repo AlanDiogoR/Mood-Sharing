@@ -1,8 +1,8 @@
-import {Request, Response} from 'express';
+import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import {User} from '../models/User';
-import {generateAccessToken, generateRefreshToken, verifyRefreshToken, TokenPayload} from '../utils/jwt';
-import {body, validationResult} from 'express-validator';
+import { User } from '../models/User';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken, TokenPayload } from '../utils/jwt';
+import { body, validationResult } from 'express-validator';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -16,10 +16,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const {email, password, name, partnerEmail} = req.body;
+    const { email, password, name, partnerEmail } = req.body;
 
     // Verifica se o usuário já existe
-    const existingUser = await User.findOne({email: email.toLowerCase()});
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       res.status(400).json({
         success: false,
@@ -40,7 +40,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     // Se forneceu email do parceiro, tenta vincular
     if (partnerEmail) {
-      const partner = await User.findOne({email: partnerEmail.toLowerCase()});
+      const partner = await User.findOne({ email: partnerEmail.toLowerCase() });
       if (partner) {
         user.partnerId = partner._id;
         // Vincula bidirecionalmente
@@ -96,10 +96,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const {email, password} = req.body;
+    const { email, password } = req.body;
 
     // Busca o usuário
-    const user = await User.findOne({email: email.toLowerCase()});
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       res.status(401).json({
         success: false,
@@ -153,7 +153,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 export const refresh = async (req: Request, res: Response): Promise<void> => {
   try {
-    const {refreshToken} = req.body;
+    const { refreshToken } = req.body;
 
     if (!refreshToken) {
       res.status(400).json({
@@ -165,7 +165,7 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
 
     try {
       const decoded = verifyRefreshToken(refreshToken);
-      
+
       // Gera novos tokens
       const tokenPayload: TokenPayload = {
         userId: decoded.userId,
@@ -235,7 +235,7 @@ export const getCurrentUser = async (req: Request, res: Response): Promise<void>
 export const linkPartner = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user?.userId;
-    const {partnerEmail} = req.body;
+    const { partnerEmail } = req.body;
 
     if (!partnerEmail) {
       res.status(400).json({
@@ -254,7 +254,7 @@ export const linkPartner = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const partner = await User.findOne({email: partnerEmail.toLowerCase()});
+    const partner = await User.findOne({ email: partnerEmail.toLowerCase() });
     if (!partner) {
       res.status(404).json({
         success: false,
@@ -266,7 +266,7 @@ export const linkPartner = async (req: Request, res: Response): Promise<void> =>
     // Vincula bidirecionalmente
     user.partnerId = partner._id;
     partner.partnerId = user._id;
-    
+
     await user.save();
     await partner.save();
 
@@ -286,11 +286,49 @@ export const linkPartner = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
+export const updateFcmToken = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user?.userId;
+    const { fcmToken } = req.body;
+
+    if (!fcmToken) {
+      res.status(400).json({
+        success: false,
+        error: 'FCM token não fornecido',
+      });
+      return;
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        error: 'Usuário não encontrado',
+      });
+      return;
+    }
+
+    user.fcmToken = fcmToken;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'FCM token atualizado com sucesso',
+    });
+  } catch (error: any) {
+    console.error('Erro ao atualizar FCM token:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao atualizar FCM token',
+    });
+  }
+};
+
 // Validações
 export const validateRegister = [
   body('email').isEmail().withMessage('Email inválido'),
-  body('password').isLength({min: 6}).withMessage('Senha deve ter pelo menos 6 caracteres'),
-  body('name').trim().isLength({min: 2}).withMessage('Nome deve ter pelo menos 2 caracteres'),
+  body('password').isLength({ min: 6 }).withMessage('Senha deve ter pelo menos 6 caracteres'),
+  body('name').trim().isLength({ min: 2 }).withMessage('Nome deve ter pelo menos 2 caracteres'),
 ];
 
 export const validateLogin = [

@@ -1,5 +1,5 @@
-import {MoodType} from '../types';
-import {CONFIG} from '../constants/config';
+import { MoodType } from '../types';
+import { CONFIG } from '../constants/config';
 
 // Detecta se está rodando no Expo Go (sem development build)
 const isExpoGo = !CONFIG.EXPO_PROJECT_ID || CONFIG.EXPO_PROJECT_ID === 'your-expo-project-id';
@@ -14,12 +14,12 @@ async function getNotifications(): Promise<any> {
   if (isExpoGo) {
     return null;
   }
-  
+
   // Cache do módulo carregado
   if (NotificationsModule) {
     return NotificationsModule;
   }
-  
+
   if (isLoadingModule) {
     // Aguarda o carregamento em andamento
     return new Promise((resolve) => {
@@ -34,9 +34,9 @@ async function getNotifications(): Promise<any> {
       }, 50);
     });
   }
-  
+
   isLoadingModule = true;
-  
+
   try {
     // Usa import() dinâmico com string construída dinamicamente para evitar
     // que o Metro bundler inclua o módulo quando estiver no Expo Go
@@ -44,7 +44,7 @@ async function getNotifications(): Promise<any> {
     const expoPart = 'expo-';
     const notificationsPart = 'notifications';
     const moduleName = expoPart + notificationsPart;
-    
+
     const module = await import(moduleName);
     // expo-notifications exporta como namespace
     NotificationsModule = module.default || module;
@@ -85,11 +85,11 @@ class NotificationService {
       });
 
       // Request permissions
-      const {status: existingStatus} = await Notifications.getPermissionsAsync();
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
 
       if (existingStatus !== 'granted') {
-        const {status} = await Notifications.requestPermissionsAsync();
+        const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
       }
 
@@ -112,12 +112,17 @@ class NotificationService {
       }
 
       // Configure notification channel (Android)
+      // IMPORTANTE: Configuração para mostrar na tela bloqueada
       try {
         await Notifications.setNotificationChannelAsync(CONFIG.NOTIFICATION_CHANNEL_ID, {
           name: CONFIG.NOTIFICATION_CHANNEL_NAME,
           importance: (Notifications as any).AndroidImportance?.MAX || 5,
           vibrationPattern: [0, 250, 250, 250],
           lightColor: '#FF231F7C',
+          lockscreenVisibility: (Notifications as any).AndroidNotificationVisibility?.PUBLIC || 1, // PUBLIC = visível na tela bloqueada
+          sound: 'default',
+          enableVibrate: true,
+          showBadge: true,
         });
       } catch (error) {
         // Ignorar erro de canal no Expo Go
@@ -206,6 +211,16 @@ class NotificationService {
           body: `${partnerName} está ${moodType} ${emoji}`,
           sound: true,
           priority: (Notifications as any).AndroidNotificationPriority?.HIGH || 1,
+          // Configurações para tela bloqueada
+          ...((Notifications as any).AndroidNotificationVisibility && {
+            android: {
+              channelId: CONFIG.NOTIFICATION_CHANNEL_ID,
+              priority: (Notifications as any).AndroidNotificationPriority?.HIGH || 1,
+              visibility: (Notifications as any).AndroidNotificationVisibility?.PUBLIC || 1, // PUBLIC = visível na tela bloqueada
+              sound: 'default',
+              vibrate: [0, 250, 250, 250],
+            },
+          }),
         },
         trigger: null, // Send immediately
       });
@@ -235,6 +250,16 @@ class NotificationService {
           body: `${partnerName} está perto de você!`,
           sound: true,
           priority: (Notifications as any).AndroidNotificationPriority?.HIGH || 1,
+          // Configurações para tela bloqueada
+          ...((Notifications as any).AndroidNotificationVisibility && {
+            android: {
+              channelId: CONFIG.NOTIFICATION_CHANNEL_ID,
+              priority: (Notifications as any).AndroidNotificationPriority?.HIGH || 1,
+              visibility: (Notifications as any).AndroidNotificationVisibility?.PUBLIC || 1, // PUBLIC = visível na tela bloqueada
+              sound: 'default',
+              vibrate: [0, 250, 250, 250],
+            },
+          }),
         },
         trigger: null, // Send immediately
       });

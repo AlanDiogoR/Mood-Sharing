@@ -1,8 +1,9 @@
-import {Request, Response} from 'express';
-import {Mood, MoodType, ILocation} from '../models/Mood';
-import {User} from '../models/User';
-import {getMoodEmoji} from '../utils/moodEmojis';
-import {calculateDistance, isWithinProximity} from '../utils/distance';
+import { Request, Response } from 'express';
+import { Mood, MoodType, ILocation } from '../models/Mood';
+import { User } from '../models/User';
+import { getMoodEmoji } from '../utils/moodEmojis';
+import { calculateDistance, isWithinProximity } from '../utils/distance';
+import { sendMoodChangeNotification, sendProximityNotification } from '../services/firebaseAdmin';
 
 const PROXIMITY_THRESHOLD_KM = 1.0;
 
@@ -23,7 +24,7 @@ export const getCurrentMood = async (req: Request, res: Response): Promise<void>
       }
     }
 
-    const mood = await Mood.findOne({userId}).sort({updatedAt: -1});
+    const mood = await Mood.findOne({ userId }).sort({ updatedAt: -1 });
 
     if (!mood) {
       res.status(404).json({
@@ -61,7 +62,7 @@ export const getPartnerMood = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const mood = await Mood.findOne({userId: partnerId}).sort({updatedAt: -1});
+    const mood = await Mood.findOne({ userId: partnerId }).sort({ updatedAt: -1 });
 
     if (!mood) {
       res.status(404).json({
@@ -87,7 +88,7 @@ export const getPartnerMood = async (req: Request, res: Response): Promise<void>
 export const updateMood = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user?.userId;
-    const {type, message, location} = req.body;
+    const { type, message, location } = req.body;
 
     if (!type || !Object.values(MoodType).includes(type)) {
       res.status(400).json({
@@ -101,7 +102,7 @@ export const updateMood = async (req: Request, res: Response): Promise<void> => 
 
     // Cria ou atualiza o mood
     const mood = await Mood.findOneAndUpdate(
-      {userId},
+      { userId },
       {
         type,
         emoji,
@@ -113,6 +114,25 @@ export const updateMood = async (req: Request, res: Response): Promise<void> => 
         upsert: true,
       }
     );
+
+    // Envia notificação para o parceiro se existir
+    try {
+      const user = await User.findById(userId);
+      if (user?.partnerId) {
+        const partner = await User.findById(user.partnerId);
+        if (partner?.fcmToken) {
+          await sendMoodChangeNotification(
+            partner.fcmToken,
+            user.name,
+            type as MoodType,
+            message
+          );
+        }
+      }
+    } catch (notificationError) {
+      // Não falha a requisição se a notificação falhar
+      console.error('Erro ao enviar notificação:', notificationError);
+    }
 
     res.json({
       success: true,
@@ -130,7 +150,7 @@ export const updateMood = async (req: Request, res: Response): Promise<void> => 
 export const updateMoodWithProximity = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user?.userId;
-    const {type, location, partnerLocation} = req.body;
+    const { type, location, partnerLocation } = req.body;
 
     if (!type || !Object.values(MoodType).includes(type)) {
       res.status(400).json({
@@ -157,7 +177,7 @@ export const updateMoodWithProximity = async (req: Request, res: Response): Prom
 
     // Atualiza o mood do usuário atual
     const mood = await Mood.findOneAndUpdate(
-      {userId},
+      { userId },
       {
         type: finalType,
         emoji,
@@ -174,7 +194,7 @@ export const updateMoodWithProximity = async (req: Request, res: Response): Prom
       const user = await User.findById(userId);
       if (user?.partnerId) {
         await Mood.findOneAndUpdate(
-          {userId: user.partnerId},
+          { userId: user.partnerId },
           {
             type: MoodType.HAPPY,
             emoji: getMoodEmoji(MoodType.HAPPY),
@@ -185,6 +205,16 @@ export const updateMoodWithProximity = async (req: Request, res: Response): Prom
             upsert: true,
           }
         );
+
+        // Envia notificação de proximidade
+        try {
+          const partner = await User.findById(user.partnerId);
+          if (partner?.fcmToken) {
+            await sendProximityNotification(partner.fcmToken, user.name);
+          }
+        } catch (notificationError) {
+          console.error('Erro ao enviar notificação de proximidade:', notificationError);
+        }
       }
     }
 
@@ -220,8 +250,8 @@ export const getMoodHistory = async (req: Request, res: Response): Promise<void>
       }
     }
 
-    const moods = await Mood.find({userId})
-      .sort({createdAt: -1})
+    const moods = await Mood.find({ userId })
+      .sort({ createdAt: -1 })
       .limit(limit);
 
     res.json({

@@ -1,10 +1,11 @@
-import mongoose, {Schema, Document} from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IUser extends Document {
   email: string;
   password: string;
   name: string;
   partnerId?: mongoose.Types.ObjectId;
+  fcmToken?: string; // Token FCM para notificações push
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,6 +35,11 @@ const UserSchema = new Schema<IUser>(
       ref: 'User',
       default: null,
     },
+    fcmToken: {
+      type: String,
+      default: null,
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -41,6 +47,6 @@ const UserSchema = new Schema<IUser>(
 );
 
 // Índices (email já tem unique: true que cria índice automaticamente)
-UserSchema.index({partnerId: 1});
+UserSchema.index({ partnerId: 1 });
 
 export const User = mongoose.model<IUser>('User', UserSchema);

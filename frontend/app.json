@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mood Sharing",
     "slug": "mood-sharing-app",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "sdkVersion": "54.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -30,11 +30,16 @@
         "backgroundColor": "#0d1117"
       },
       "package": "com.moodsharing.app",
+      "googleServicesFile": "./android/app/google-services.json",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
-        "RECEIVE_BOOT_COMPLETED"
+        "RECEIVE_BOOT_COMPLETED",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
       ]
     },
     "web": {
@@ -52,15 +57,34 @@
         {
           "faceIDPermission": "Permitir uso do Face ID para desbloquear o app"
         }
+      ],
+      [
+        "@react-native-firebase/app",
+        {
+          "android": {
+            "googleServicesFile": "./android/app/google-services.json"
+          }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#0d1117",
+          "mode": "production"
+        }
       ]
     ],
     "extra": {
-      "eas": {
-        "projectId": "your-project-id"
-      },
+      "FIREBASE_API_KEY": "AIzaSyBopf7SOMFkWaIoiY6WIX8ZxV0I5IgclIE",
+      "FIREBASE_PROJECT_ID": "mood-sharing",
+      "FIREBASE_MESSAGING_SENDER_ID": "538084722310",
       "API_BASE_URL": "http://191.37.43.39:3001/api",
       "MONGODB_URI": "mongodb+srv://alandiogor_db_user:vEdWjEc6o4GmghTp@cluster0.nvlz1pz.mongodb.net/?appName=Cluster0",
-      "EXPO_PROJECT_ID": "your-expo-project-id"
+      "EXPO_PROJECT_ID": "your-expo-project-id",
+      "eas": {
+        "projectId": "4625d33a-862a-4325-a20d-a9c0db12150d"
+      }
     }
   }
 }
