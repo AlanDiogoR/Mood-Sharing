@@ -77,11 +77,14 @@ export const listMedia = async (req: Request, res: Response): Promise<void> => {
     }
 
     const hasManualOrder = await MediaItem.exists({ userId, orderIndex: { $ne: null } });
-    const sort = hasManualOrder
-      ? ({ orderIndex: 1 as SortOrder, createdAt: 1 as SortOrder } as const)
-      : ({ createdAt: 1 as SortOrder } as const);
+    let query = MediaItem.find({ userId });
+    if (hasManualOrder) {
+      query = query.sort([['orderIndex', 1 as SortOrder], ['createdAt', 1 as SortOrder]]);
+    } else {
+      query = query.sort([['createdAt', 1 as SortOrder]]);
+    }
 
-    const items = await MediaItem.find({ userId }).sort(sort);
+    const items = await query;
     res.json({ success: true, data: items, meta: { manualOrder: !!hasManualOrder } });
   } catch (error: any) {
     console.error('Erro ao listar mídia:', error);
