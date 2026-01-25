@@ -5,7 +5,7 @@ export interface IUser extends Document {
   password: string;
   name: string;
   partnerId?: mongoose.Types.ObjectId;
-  fcmToken?: string; // Token FCM para notificações push
+  fcmToken?: string; // Token FCM ou Expo Push Token para notificações push
   photoUrl?: string;
   photoFilename?: string;
   photoUploadedAt?: Date;

@@ -291,7 +291,7 @@ export const updateFcmToken = async (req: Request, res: Response): Promise<void>
     if (!fcmToken) {
       res.status(400).json({
         success: false,
-        error: 'FCM token não fornecido',
+        error: 'Token de notificação não fornecido',
       });
       return;
     }
@@ -305,18 +305,20 @@ export const updateFcmToken = async (req: Request, res: Response): Promise<void>
       return;
     }
 
+    // Aceita tanto tokens FCM quanto Expo Push Tokens
+    // O campo fcmToken armazena ambos os tipos de tokens
     user.fcmToken = fcmToken;
     await user.save();
 
     res.json({
       success: true,
-      message: 'FCM token atualizado com sucesso',
+      message: 'Token de notificação atualizado com sucesso',
     });
   } catch (error: any) {
-    console.error('Erro ao atualizar FCM token:', error);
+    console.error('Erro ao atualizar token de notificação:', error);
     res.status(500).json({
       success: false,
-      error: 'Erro ao atualizar FCM token',
+      error: 'Erro ao atualizar token de notificação',
     });
   }
 };

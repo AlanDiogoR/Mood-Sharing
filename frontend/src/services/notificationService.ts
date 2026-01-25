@@ -1,5 +1,6 @@
 import { MoodType } from '../types';
 import { CONFIG } from '../constants/config';
+import { apiClient } from '../utils/api';
 
 // Detecta se está rodando no Expo Go (sem development build)
 const isExpoGo = !CONFIG.EXPO_PROJECT_ID || CONFIG.EXPO_PROJECT_ID === 'your-expo-project-id';
@@ -107,6 +108,9 @@ class NotificationService {
           });
           this.expoPushToken = tokenData.data;
           console.log('Expo Push Token:', this.expoPushToken);
+          
+          // Envia o token para o backend
+          await this.sendTokenToBackend(this.expoPushToken);
         } catch (error) {
           console.warn('Error getting Expo push token:', error);
         }
@@ -174,11 +178,31 @@ class NotificationService {
           projectId: CONFIG.EXPO_PROJECT_ID,
         });
         this.expoPushToken = tokenData.data;
+        // Envia o token para o backend quando obtido
+        await this.sendTokenToBackend(this.expoPushToken);
       } catch (error) {
         console.error('Error getting Expo push token:', error);
       }
     }
     return this.expoPushToken;
+  }
+
+  private async sendTokenToBackend(token: string): Promise<void> {
+    try {
+      // Envia o token para o backend para ser armazenado
+      // O apiClient já adiciona o token de autenticação automaticamente
+      const response = await apiClient.post('/auth/fcm-token', {
+        fcmToken: token, // Backend aceitará tanto FCM quanto Expo tokens neste campo
+      });
+
+      if (!response.success) {
+        console.warn('Erro ao enviar Expo Push Token para o backend:', response.error);
+      } else {
+        console.log('Expo Push Token enviado ao backend com sucesso');
+      }
+    } catch (error) {
+      console.warn('Erro ao enviar Expo Push Token:', error);
+    }
   }
 
   async sendMoodChangeNotification(partnerName: string, moodType: MoodType): Promise<void> {
@@ -286,7 +310,9 @@ class NotificationService {
   async updateLockScreenNotification(
     photoUrl: string,
     moodType: MoodType,
-    moodMessage?: string
+    moodMessage?: string,
+    partnerMood?: MoodType,
+    partnerName?: string
   ): Promise<void> {
     if (isExpoGo) {
       return;
@@ -315,21 +341,37 @@ class NotificationService {
       };
 
       const emoji = emojiMap[moodType] || '😊';
+      const partnerEmoji = partnerMood ? emojiMap[partnerMood] : null;
+
+      // Monta o corpo da notificação
+      let body = moodMessage ? `${moodType} ${emoji} — ${moodMessage}` : `${moodType} ${emoji}`;
+      if (partnerMood && partnerName) {
+        body += `\n${partnerName}: ${partnerMood} ${partnerEmoji}`;
+      }
 
       const result = await Notifications.scheduleNotificationAsync({
         content: {
-          title: 'Seu humor atual',
-          body: moodMessage ? `${moodType} ${emoji} — ${moodMessage}` : `${moodType} ${emoji}`,
-          sound: true,
-          priority: (Notifications as any).AndroidNotificationPriority?.HIGH || 1,
+          title: 'Mood Sharing',
+          body: body,
+          sound: false, // Não toca som para notificação persistente
+          priority: (Notifications as any).AndroidNotificationPriority?.MAX || 2,
           ...(Notifications as any).AndroidNotificationVisibility && {
             android: {
               channelId: CONFIG.NOTIFICATION_CHANNEL_ID,
-              priority: (Notifications as any).AndroidNotificationPriority?.HIGH || 1,
-              visibility: (Notifications as any).AndroidNotificationVisibility?.PUBLIC || 1,
+              priority: (Notifications as any).AndroidNotificationPriority?.MAX || 2,
+              visibility: (Notifications as any).AndroidNotificationVisibility?.PUBLIC || 1, // PUBLIC = visível na tela bloqueada
               imageUrl: photoUrl,
-              sound: 'default',
-              vibrate: [0, 250, 250, 250],
+              sound: null, // Sem som para notificação persistente
+              vibrate: null, // Sem vibração para notificação persistente
+              ongoing: true, // Notificação contínua (persistente)
+              autoCancel: false, // Não cancela automaticamente
+              showWhen: true, // Mostra quando foi criada
+            },
+          },
+          ...(Notifications as any).iOS && {
+            ios: {
+              sound: null,
+              badge: null,
             },
           },
         },

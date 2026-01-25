@@ -99,9 +99,16 @@ export const HomeScreen: React.FC = () => {
   useEffect(() => {
     const photoUrl = getAbsoluteUrl(user?.photoUrl);
     if (photoUrl && currentMood) {
-      notificationService.updateLockScreenNotification(photoUrl, currentMood.type, currentMood.message);
+      const partnerName = user?.partnerId || 'Parceiro';
+      notificationService.updateLockScreenNotification(
+        photoUrl,
+        currentMood.type,
+        currentMood.message,
+        partnerMood?.type,
+        partnerMood ? partnerName : undefined
+      );
     }
-  }, [user?.photoUrl, currentMood]);
+  }, [user?.photoUrl, currentMood, partnerMood]);
 
   if (isLocked) {
     return <LockScreen onUnlock={handleUnlock} />;

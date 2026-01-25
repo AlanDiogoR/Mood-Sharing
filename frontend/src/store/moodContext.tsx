@@ -2,7 +2,7 @@ import React, {createContext, useContext, useState, useEffect, ReactNode} from '
 import {Mood, MoodType, Location} from '../types';
 import {moodService} from '../services/moodService';
 import {locationService} from '../services/locationService';
-import {notificationService} from '../services/notificationServiceWrapper';
+import {notificationService} from '../services/notificationService';
 import {calculateDistance, isWithinProximity} from '../utils/distance';
 import {CONFIG} from '../constants/config';
 import {useAuth} from './authContext';
@@ -141,6 +141,18 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
           setIsNearby(calculatedDistance <= CONFIG.PROXIMITY_THRESHOLD_KM);
         }
       }
+
+      // Atualiza notificação da tela bloqueada quando os humores mudam
+      if (currentResponse.success && currentResponse.data && user?.photoUrl) {
+        const partnerName = user?.partnerId || 'Parceiro';
+        await notificationService.updateLockScreenNotification(
+          user.photoUrl,
+          currentResponse.data.type,
+          currentResponse.data.message,
+          partnerResponse.success && partnerResponse.data ? partnerResponse.data.type : undefined,
+          partnerResponse.success && partnerResponse.data ? partnerName : undefined
+        );
+      }
     } catch (error) {
       console.error('Error refreshing moods:', error);
     } finally {
@@ -166,6 +178,18 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
           await notificationService.sendMoodChangeNotification(
             user.partnerId,
             response.data.type
+          );
+        }
+
+        // Atualiza notificação da tela bloqueada após atualizar humor
+        if (user.photoUrl) {
+          const partnerName = user.partnerId || 'Parceiro';
+          await notificationService.updateLockScreenNotification(
+            user.photoUrl,
+            response.data.type,
+            response.data.message,
+            partnerMood?.type,
+            partnerMood ? partnerName : undefined
           );
         }
       } else {

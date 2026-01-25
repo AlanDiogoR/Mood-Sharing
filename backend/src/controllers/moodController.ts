@@ -3,7 +3,8 @@ import { Mood, MoodType, ILocation } from '../models/Mood';
 import { User } from '../models/User';
 import { getMoodEmoji } from '../utils/moodEmojis';
 import { calculateDistance, isWithinProximity } from '../utils/distance';
-import { sendMoodChangeNotification, sendProximityNotification } from '../services/firebaseAdmin';
+import { sendMoodChangeNotification as sendExpoMoodChangeNotification, sendProximityNotification as sendExpoProximityNotification, isExpoPushToken } from '../services/expoPushService';
+import { sendMoodChangeNotification as sendFcmMoodChangeNotification, sendProximityNotification as sendFcmProximityNotification } from '../services/firebaseAdmin';
 
 const PROXIMITY_THRESHOLD_KM = 1.0;
 
@@ -121,12 +122,23 @@ export const updateMood = async (req: Request, res: Response): Promise<void> => 
       if (user?.partnerId) {
         const partner = await User.findById(user.partnerId);
         if (partner?.fcmToken) {
-          await sendMoodChangeNotification(
-            partner.fcmToken,
-            user.name,
-            type as MoodType,
-            message
-          );
+          // Verifica se é um token Expo ou FCM e usa o serviço apropriado
+          if (isExpoPushToken(partner.fcmToken)) {
+            await sendExpoMoodChangeNotification(
+              partner.fcmToken,
+              user.name,
+              type as MoodType,
+              message
+            );
+          } else {
+            // Token FCM - usa Firebase Admin
+            await sendFcmMoodChangeNotification(
+              partner.fcmToken,
+              user.name,
+              type as MoodType,
+              message
+            );
+          }
         }
       }
     } catch (notificationError) {
@@ -210,7 +222,13 @@ export const updateMoodWithProximity = async (req: Request, res: Response): Prom
         try {
           const partner = await User.findById(user.partnerId);
           if (partner?.fcmToken) {
-            await sendProximityNotification(partner.fcmToken, user.name);
+            // Verifica se é um token Expo ou FCM e usa o serviço apropriado
+            if (isExpoPushToken(partner.fcmToken)) {
+              await sendExpoProximityNotification(partner.fcmToken, user.name);
+            } else {
+              // Token FCM - usa Firebase Admin
+              await sendFcmProximityNotification(partner.fcmToken, user.name);
+            }
           }
         } catch (notificationError) {
           console.error('Erro ao enviar notificação de proximidade:', notificationError);
