@@ -20,7 +20,6 @@ import {LockScreen} from './LockScreen';
 import {Avatar} from '../components/common/Avatar';
 import {userService} from '../services/userService';
 import {getAbsoluteUrl} from '../utils/url';
-import {notificationService} from '../services/notificationService';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 export const HomeScreen: React.FC = () => {
@@ -95,20 +94,6 @@ export const HomeScreen: React.FC = () => {
       setIsUploadingPhoto(false);
     }
   };
-
-  useEffect(() => {
-    if (currentMood) {
-      const photoUrl = getAbsoluteUrl(user?.photoUrl);
-      const partnerName = user?.partnerId || 'Parceiro';
-      notificationService.updateLockScreenNotification(
-        photoUrl,
-        currentMood.type,
-        currentMood.message,
-        partnerMood?.type,
-        partnerMood ? partnerName : undefined
-      );
-    }
-  }, [user?.photoUrl, currentMood, partnerMood]);
 
   if (isLocked) {
     return <LockScreen onUnlock={handleUnlock} />;

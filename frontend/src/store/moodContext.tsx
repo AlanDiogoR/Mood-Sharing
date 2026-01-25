@@ -1,4 +1,4 @@
-import React, {createContext, useContext, useState, useEffect, ReactNode} from 'react';
+import React, {createContext, useContext, useState, useEffect, ReactNode, useRef} from 'react';
 import {Mood, MoodType, Location} from '../types';
 import {moodService} from '../services/moodService';
 import {locationService} from '../services/locationService';
@@ -7,6 +7,7 @@ import {calculateDistance, isWithinProximity} from '../utils/distance';
 import {getAbsoluteUrl} from '../utils/url';
 import {CONFIG} from '../constants/config';
 import {useAuth} from './authContext';
+import {widgetService} from '../services/widgetService';
 
 interface MoodContextType {
   currentMood: Mood | null;
@@ -39,19 +40,50 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isNearby, setIsNearby] = useState(false);
   const [distance, setDistance] = useState<number | null>(null);
+  const currentMoodRef = useRef<Mood | null>(null);
+  const partnerMoodRef = useRef<Mood | null>(null);
+  const userRef = useRef<typeof user | null>(null);
+  const lastLockscreenKeyRef = useRef<string | null>(null);
+  const lastWidgetKeyRef = useRef<string | null>(null);
+  const lastProximityStateRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    currentMoodRef.current = currentMood;
+  }, [currentMood]);
+
+  useEffect(() => {
+    partnerMoodRef.current = partnerMood;
+  }, [partnerMood]);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
       return;
     }
 
-    initializeLocationTracking();
-    refreshMoods();
-    const cleanupPolling = startMoodPolling();
+    let cleanupPolling: (() => void) | null = null;
+    let isActive = true;
+
+    const run = async () => {
+      await refreshMoods();
+      if (!isActive) {
+        return;
+      }
+      await initializeLocationTracking();
+      cleanupPolling = startMoodPolling();
+    };
+
+    run();
 
     return () => {
+      isActive = false;
       locationService.stopTracking();
-      cleanupPolling();
+      if (cleanupPolling) {
+        cleanupPolling();
+      }
     };
   }, [user]);
 
@@ -74,13 +106,17 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
   };
 
   const checkProximity = async (myLocation: Location) => {
-    if (!user?.partnerId || !partnerMood?.location) {
+    const activeUser = userRef.current;
+    const activePartnerMood = partnerMoodRef.current;
+    const activeCurrentMood = currentMoodRef.current;
+
+    if (!activeUser?.partnerId || !activePartnerMood?.location) {
       return;
     }
 
     const partnerLocation: Location = {
-      latitude: partnerMood.location.latitude,
-      longitude: partnerMood.location.longitude,
+      latitude: activePartnerMood.location.latitude,
+      longitude: activePartnerMood.location.longitude,
       timestamp: Date.now(),
     };
 
@@ -90,7 +126,10 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
     const nearby = isWithinProximity(myLocation, partnerLocation, CONFIG.PROXIMITY_THRESHOLD_KM);
     setIsNearby(nearby);
 
-    if (nearby && currentMood?.type !== MoodType.HAPPY) {
+    const wasNearby = lastProximityStateRef.current;
+    lastProximityStateRef.current = nearby;
+
+    if (nearby && !wasNearby && activeCurrentMood?.type !== MoodType.HAPPY) {
       // Auto-update both to happy when nearby
       await updateMoodWithProximity(MoodType.HAPPY, myLocation, partnerLocation);
     }
@@ -139,21 +178,48 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
             partnerResponse.data.location
           );
           setDistance(calculatedDistance);
-          setIsNearby(calculatedDistance <= CONFIG.PROXIMITY_THRESHOLD_KM);
+          const nearby = calculatedDistance <= CONFIG.PROXIMITY_THRESHOLD_KM;
+          setIsNearby(nearby);
+          lastProximityStateRef.current = nearby;
         }
       }
 
       // Atualiza notificação da tela bloqueada quando os humores mudam
       if (currentResponse.success && currentResponse.data) {
-        const partnerName = user?.partnerId || 'Parceiro';
+        const partnerName = 'Parceiro';
         const absolutePhotoUrl = getAbsoluteUrl(user?.photoUrl);
-        await notificationService.updateLockScreenNotification(
-          absolutePhotoUrl,
-          currentResponse.data.type,
-          currentResponse.data.message,
-          partnerResponse.success && partnerResponse.data ? partnerResponse.data.type : undefined,
-          partnerResponse.success && partnerResponse.data ? partnerName : undefined
-        );
+        const partnerData = partnerResponse.success ? partnerResponse.data : undefined;
+        const lockscreenKey = JSON.stringify({
+          photoUrl: absolutePhotoUrl,
+          moodType: currentResponse.data.type,
+          moodMessage: currentResponse.data.message || '',
+          partnerType: partnerData?.type || '',
+          partnerMessage: partnerData?.message || '',
+        });
+
+        if (lastLockscreenKeyRef.current !== lockscreenKey) {
+          lastLockscreenKeyRef.current = lockscreenKey;
+          await notificationService.updateLockScreenNotification(
+            absolutePhotoUrl,
+            currentResponse.data.type,
+            currentResponse.data.message,
+            partnerData?.type,
+            partnerData ? partnerName : undefined,
+            partnerData?.message
+          );
+        }
+
+        if (partnerData) {
+          const widgetKey = JSON.stringify({
+            partnerType: partnerData.type,
+            partnerMessage: partnerData.message || '',
+          });
+
+          if (lastWidgetKeyRef.current !== widgetKey) {
+            lastWidgetKeyRef.current = widgetKey;
+            widgetService.updatePartnerMoodWidget(partnerName, partnerData.message || '');
+          }
+        }
       }
     } catch (error) {
       console.error('Error refreshing moods:', error);
@@ -176,23 +242,7 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
         setCurrentMood(response.data);
         await refreshMoods();
 
-        if (user.partnerId) {
-          await notificationService.sendMoodChangeNotification(
-            user.partnerId,
-            response.data.type
-          );
-        }
-
-        // Atualiza notificação da tela bloqueada após atualizar humor
-        const partnerName = user.partnerId || 'Parceiro';
-        const absolutePhotoUrl = getAbsoluteUrl(user?.photoUrl);
-        await notificationService.updateLockScreenNotification(
-          absolutePhotoUrl,
-          response.data.type,
-          response.data.message,
-          partnerMood?.type,
-          partnerMood ? partnerName : undefined
-        );
+        // Atualização de notificações é tratada no refreshMoods para evitar duplicidade
       } else {
         throw new Error(response.error || 'Erro ao atualizar estado');
       }

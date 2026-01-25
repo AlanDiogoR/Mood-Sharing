@@ -199,30 +199,26 @@ class NotificationService {
     }
   }
 
-  async sendMoodChangeNotification(partnerName: string, moodType: MoodType): Promise<void> {
+  async sendMoodChangeNotification(
+    partnerName: string,
+    moodType: MoodType,
+    moodMessage?: string
+  ): Promise<void> {
     const Notifications = await getNotifications();
     if (!Notifications) {
       return;
     }
 
     try {
-      const moodEmojis: Record<MoodType, string> = {
-        [MoodType.HAPPY]: '😊',
-        [MoodType.SAD]: '😢',
-        [MoodType.ANXIOUS]: '😰',
-        [MoodType.CALM]: '😌',
-        [MoodType.EXCITED]: '🤩',
-        [MoodType.TIRED]: '😴',
-        [MoodType.ANGRY]: '😠',
-        [MoodType.LOVE]: '❤️',
-      };
-
-      const emoji = moodEmojis[moodType] || '😊';
+      const trimmedMessage = moodMessage?.trim();
+      const bodyText = trimmedMessage
+        ? `${partnerName}: ${trimmedMessage}`
+        : `${partnerName} atualizou o humor`;
 
       await Notifications.scheduleNotificationAsync({
         content: {
           title: 'Mood Sharing',
-          body: `${partnerName} está ${moodType} ${emoji}`,
+          body: bodyText,
           sound: true,
           priority: (Notifications as any).AndroidNotificationPriority?.HIGH || 1,
           // Configurações para tela bloqueada
@@ -296,7 +292,8 @@ class NotificationService {
     moodType: MoodType,
     moodMessage?: string,
     partnerMood?: MoodType,
-    partnerName?: string
+    partnerName?: string,
+    partnerMessage?: string
   ): Promise<void> {
     const Notifications = await getNotifications();
     if (!Notifications) {
@@ -309,25 +306,13 @@ class NotificationService {
         this.lockScreenNotificationId = null;
       }
 
-      const emojiMap: Record<MoodType, string> = {
-        [MoodType.HAPPY]: '😊',
-        [MoodType.SAD]: '😢',
-        [MoodType.ANXIOUS]: '😰',
-        [MoodType.CALM]: '😌',
-        [MoodType.EXCITED]: '🤩',
-        [MoodType.TIRED]: '😴',
-        [MoodType.ANGRY]: '😠',
-        [MoodType.LOVE]: '❤️',
-      };
-
-      const emoji = emojiMap[moodType] || '😊';
-      const partnerEmoji = partnerMood ? emojiMap[partnerMood] : null;
-
-      // Monta o corpo da notificação
-      let body = moodMessage ? `${moodType} ${emoji} — ${moodMessage}` : `${moodType} ${emoji}`;
-      if (partnerMood && partnerName) {
-        body += `\n${partnerName}: ${partnerMood} ${partnerEmoji}`;
-      }
+      const trimmedPartnerMessage = partnerMessage?.trim();
+      const trimmedMoodMessage = moodMessage?.trim();
+      const titleText = partnerName?.trim() || 'Mood Sharing';
+      const bodyText =
+        trimmedPartnerMessage ||
+        trimmedMoodMessage ||
+        'Atualizou o humor';
 
       const androidPayload: Record<string, unknown> = {
         channelId: CONFIG.NOTIFICATION_CHANNEL_ID,
@@ -346,8 +331,8 @@ class NotificationService {
 
       const result = await Notifications.scheduleNotificationAsync({
         content: {
-          title: 'Mood Sharing',
-          body: body,
+          title: titleText,
+          body: bodyText,
           sound: false, // Não toca som para notificação persistente
           priority: (Notifications as any).AndroidNotificationPriority?.MAX || 2,
           ...(Notifications as any).AndroidNotificationVisibility && {

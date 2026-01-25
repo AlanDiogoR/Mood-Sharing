@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@android:color/black">
+
+    <TextView
+        android:id="@+id/widget_partner_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Parceiro"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/white" />
+
+    <TextView
+        android:id="@+id/widget_partner_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Atualizou o humor"
+        android:textSize="14sp"
+        android:textColor="@android:color/white" />
+
+    <TextView
+        android:id="@+id/widget_updated_at"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="Atualizado: --:--"
+        android:textSize="12sp"
+        android:textColor="@android:color/darker_gray" />
+</LinearLayout>

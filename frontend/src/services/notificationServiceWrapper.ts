@@ -16,7 +16,11 @@ class NotificationServiceStub {
     return null;
   }
 
-  async sendMoodChangeNotification(_partnerName: string, _moodType: MoodType): Promise<void> {
+  async sendMoodChangeNotification(
+    _partnerName: string,
+    _moodType: MoodType,
+    _moodMessage?: string
+  ): Promise<void> {
     // No-op no Expo Go
   }
 
