@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
 import mongoose from 'mongoose';
 import { MediaItem } from '../models/MediaItem';
+import { SortOrder } from 'mongoose';
 
 const getUserId = (req: Request): string | undefined => (req as any).user?.userId;
 
@@ -76,7 +77,9 @@ export const listMedia = async (req: Request, res: Response): Promise<void> => {
     }
 
     const hasManualOrder = await MediaItem.exists({ userId, orderIndex: { $ne: null } });
-    const sort = hasManualOrder ? { orderIndex: 1, createdAt: 1 } : { createdAt: 1 };
+    const sort = hasManualOrder
+      ? ({ orderIndex: 1 as SortOrder, createdAt: 1 as SortOrder } as const)
+      : ({ createdAt: 1 as SortOrder } as const);
 
     const items = await MediaItem.find({ userId }).sort(sort);
     res.json({ success: true, data: items, meta: { manualOrder: !!hasManualOrder } });
@@ -197,7 +200,7 @@ export const reorderMedia = async (req: Request, res: Response): Promise<void> =
 
     const bulkOps = orderedIds.map((id, index) => ({
       updateOne: {
-        filter: { _id: id, userId },
+        filter: { _id: new mongoose.Types.ObjectId(id), userId: new mongoose.Types.ObjectId(userId) },
         update: { $set: { orderIndex: index } },
       },
     }));

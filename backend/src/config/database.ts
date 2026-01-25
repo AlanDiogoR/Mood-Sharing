@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { ConnectOptions } from 'mongoose';
 
 export const connectDatabase = async (): Promise<void> => {
   try {
@@ -9,7 +9,7 @@ export const connectDatabase = async (): Promise<void> => {
     }
 
     // Opções de conexão
-    const options = {
+    const options: ConnectOptions = {
       retryWrites: true,
       w: 'majority',
     };

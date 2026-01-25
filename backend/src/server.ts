@@ -3,7 +3,7 @@ import { connectDatabase } from './config/database';
 import { ensureUploadDir } from './config/uploads';
 import { initializeFirebaseAdmin } from './services/firebaseAdmin';
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 // Inicia o servidor
 const startServer = async () => {
   try {

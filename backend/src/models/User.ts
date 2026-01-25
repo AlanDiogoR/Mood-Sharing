@@ -68,8 +68,8 @@ UserSchema.set('toJSON', {
   virtuals: true,
   versionKey: false,
   transform: (_doc, ret) => {
-    ret.id = ret._id;
-    delete ret._id;
+    const { _id, ...rest } = ret;
+    return { ...rest, id: _id };
   },
 });
 
