@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-import { getStore } from '@netlify/blobs';
+import { getStore, BlobInput } from '@netlify/blobs';
 import { User } from '../models/User';
 import { isServerless, uploadDir } from '../config/uploads';
 
@@ -73,7 +73,7 @@ export const uploadUserPhoto = async (req: Request, res: Response): Promise<void
         req.file.buffer.byteOffset,
         req.file.buffer.byteOffset + req.file.buffer.byteLength
       );
-      await store.set(filename, arrayBuffer, {
+      await store.set(filename, arrayBuffer as BlobInput, {
         metadata: {
           contentType: req.file.mimetype,
         },
