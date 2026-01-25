@@ -16,7 +16,20 @@ const deleteFileIfExists = async (filePath: string): Promise<void> => {
   }
 };
 
-const getUserPhotoStore = () => getStore('user-photos');
+const getUserPhotoStore = () => {
+  const siteID = process.env.NETLIFY_BLOBS_SITE_ID;
+  const token = process.env.NETLIFY_BLOBS_TOKEN;
+
+  if (siteID && token) {
+    return getStore({
+      name: 'user-photos',
+      siteID,
+      token,
+    });
+  }
+
+  return getStore('user-photos');
+};
 
 const getExtensionFromMime = (mimeType?: string): string => {
   switch (mimeType) {

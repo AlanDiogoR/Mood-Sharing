@@ -63,30 +63,10 @@ export async function sendMoodChangeNotification(
     return;
   }
 
-  const moodEmojis: Record<MoodType, string> = {
-    [MoodType.HAPPY]: '😊',
-    [MoodType.SAD]: '😢',
-    [MoodType.ANXIOUS]: '😰',
-    [MoodType.CALM]: '😌',
-    [MoodType.EXCITED]: '🤩',
-    [MoodType.TIRED]: '😴',
-    [MoodType.ANGRY]: '😠',
-    [MoodType.LOVE]: '❤️',
-  };
-
-  const emoji = moodEmojis[moodType] || '😊';
-  const moodMessages: Record<MoodType, string> = {
-    [MoodType.HAPPY]: 'está feliz hoje',
-    [MoodType.SAD]: 'está triste hoje',
-    [MoodType.ANXIOUS]: 'está ansioso hoje',
-    [MoodType.CALM]: 'está calmo hoje',
-    [MoodType.EXCITED]: 'está empolgado hoje',
-    [MoodType.TIRED]: 'está cansado hoje',
-    [MoodType.ANGRY]: 'está irritado hoje',
-    [MoodType.LOVE]: 'está apaixonado hoje',
-  };
-
-  const bodyText = message || `${partnerName} ${moodMessages[moodType]} ${emoji}`;
+  const trimmedMessage = message?.trim();
+  const bodyText = trimmedMessage
+    ? `${partnerName}: ${trimmedMessage}`
+    : `${partnerName} atualizou o humor`;
 
   const notification: admin.messaging.Message = {
     token: fcmToken,
@@ -98,8 +78,7 @@ export async function sendMoodChangeNotification(
       type: 'mood_change',
       moodType: moodType,
       partnerName: partnerName,
-      emoji: emoji,
-      ...(message && { message: message }),
+      ...(trimmedMessage && { message: trimmedMessage }),
     },
     android: {
       priority: 'high',
