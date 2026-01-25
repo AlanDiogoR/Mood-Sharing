@@ -2,6 +2,7 @@
   command = "npm install && npm run build"
   functions = "netlify/functions"
   publish = "netlify/public"
+  environment = { NPM_FLAGS = "--include=dev", NPM_CONFIG_PRODUCTION = "false" }
 
 [functions]
   node_bundler = "esbuild"
