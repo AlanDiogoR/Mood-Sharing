@@ -1,5 +1,5 @@
 [build]
-  command = "npm --prefix backend install && npm --prefix backend run build"
+  command = "npm install && npm run build"
   functions = "netlify/functions"
   publish = "netlify/public"
 
