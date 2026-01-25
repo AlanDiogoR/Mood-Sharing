@@ -87,7 +87,7 @@
       "FIREBASE_API_KEY": "AIzaSyBopf7SOMFkWaIoiY6WIX8ZxV0I5IgclIE",
       "FIREBASE_PROJECT_ID": "mood-sharing",
       "FIREBASE_MESSAGING_SENDER_ID": "538084722310",
-      "API_BASE_URL": "http://191.37.43.39:3001/api",
+      "API_BASE_URL": "https://moodsharin.netlify.app/api",
       "MONGODB_URI": "mongodb+srv://alandiogor_db_user:vEdWjEc6o4GmghTp@cluster0.nvlz1pz.mongodb.net/?appName=Cluster0",
       "EXPO_PROJECT_ID": "your-expo-project-id",
       "eas": {

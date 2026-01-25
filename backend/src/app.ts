@@ -27,7 +27,9 @@ const corsOptions = {
 
     // Em produção, verifica as origens permitidas
     const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || [];
-    if (!origin || allowedOrigins.includes(origin) || origin.startsWith('exp://')) {
+    const localDevOrigins = ['http://localhost:8081', 'http://localhost:19006'];
+    const allAllowed = [...allowedOrigins, ...localDevOrigins];
+    if (!origin || allAllowed.includes(origin) || origin.startsWith('exp://')) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
