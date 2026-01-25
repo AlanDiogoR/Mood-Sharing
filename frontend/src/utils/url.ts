@@ -11,5 +11,6 @@ export const getAbsoluteUrl = (relativeUrl?: string | null): string | null => {
   if (relativeUrl.startsWith('http://') || relativeUrl.startsWith('https://')) {
     return relativeUrl;
   }
-  return `${getServerBaseUrl()}${relativeUrl}`;
+  const normalized = relativeUrl.startsWith('/') ? relativeUrl : `/${relativeUrl}`;
+  return `${getServerBaseUrl()}${normalized}`;
 };

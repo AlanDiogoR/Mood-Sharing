@@ -1,6 +1,6 @@
 import { app } from './app';
 import { connectDatabase } from './config/database';
-import { ensureUploadDir } from './config/uploads';
+import { ensureUploadDir, isServerless } from './config/uploads';
 import { initializeFirebaseAdmin } from './services/firebaseAdmin';
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -8,7 +8,9 @@ const PORT = Number(process.env.PORT) || 3000;
 const startServer = async () => {
   try {
     await connectDatabase();
-    await ensureUploadDir();
+    if (!isServerless) {
+      await ensureUploadDir();
+    }
 
     // Inicializa Firebase Admin
     initializeFirebaseAdmin();

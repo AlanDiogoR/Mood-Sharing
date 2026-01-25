@@ -12,10 +12,6 @@ let NotificationsModule: any = null;
 let isLoadingModule = false;
 
 async function getNotifications(): Promise<any> {
-  if (isExpoGo) {
-    return null;
-  }
-
   // Cache do módulo carregado
   if (NotificationsModule) {
     return NotificationsModule;
@@ -64,12 +60,6 @@ class NotificationService {
   private lockScreenNotificationId: string | null = null;
 
   async initialize(): Promise<void> {
-    // No Expo Go, não inicializa push notifications para evitar avisos
-    if (isExpoGo) {
-      this.isInitialized = true;
-      return;
-    }
-
     const Notifications = await getNotifications();
     if (!Notifications) {
       this.isInitialized = true;
@@ -100,8 +90,12 @@ class NotificationService {
         return;
       }
 
-      // Get push token (só se EXPO_PROJECT_ID estiver configurado)
-      if (CONFIG.EXPO_PROJECT_ID && CONFIG.EXPO_PROJECT_ID !== 'your-expo-project-id') {
+      // Get push token (evita no Expo Go e quando não configurado)
+      if (
+        !isExpoGo &&
+        CONFIG.EXPO_PROJECT_ID &&
+        CONFIG.EXPO_PROJECT_ID !== 'your-expo-project-id'
+      ) {
         try {
           const tokenData = await Notifications.getExpoPushTokenAsync({
             projectId: CONFIG.EXPO_PROJECT_ID,
@@ -206,11 +200,6 @@ class NotificationService {
   }
 
   async sendMoodChangeNotification(partnerName: string, moodType: MoodType): Promise<void> {
-    // No Expo Go, não envia notificações push (apenas local funciona)
-    if (isExpoGo) {
-      return;
-    }
-
     const Notifications = await getNotifications();
     if (!Notifications) {
       return;
@@ -258,11 +247,6 @@ class NotificationService {
   }
 
   async sendProximityNotification(partnerName: string): Promise<void> {
-    // No Expo Go, não envia notificações push (apenas local funciona)
-    if (isExpoGo) {
-      return;
-    }
-
     const Notifications = await getNotifications();
     if (!Notifications) {
       return;
@@ -308,16 +292,12 @@ class NotificationService {
   }
 
   async updateLockScreenNotification(
-    photoUrl: string,
+    photoUrl: string | null | undefined,
     moodType: MoodType,
     moodMessage?: string,
     partnerMood?: MoodType,
     partnerName?: string
   ): Promise<void> {
-    if (isExpoGo) {
-      return;
-    }
-
     const Notifications = await getNotifications();
     if (!Notifications) {
       return;
@@ -349,6 +329,21 @@ class NotificationService {
         body += `\n${partnerName}: ${partnerMood} ${partnerEmoji}`;
       }
 
+      const androidPayload: Record<string, unknown> = {
+        channelId: CONFIG.NOTIFICATION_CHANNEL_ID,
+        priority: (Notifications as any).AndroidNotificationPriority?.MAX || 2,
+        visibility: (Notifications as any).AndroidNotificationVisibility?.PUBLIC || 1, // PUBLIC = visível na tela bloqueada
+        sound: null, // Sem som para notificação persistente
+        vibrate: null, // Sem vibração para notificação persistente
+        ongoing: true, // Notificação contínua (persistente)
+        autoCancel: false, // Não cancela automaticamente
+        showWhen: true, // Mostra quando foi criada
+      };
+
+      if (photoUrl) {
+        androidPayload.imageUrl = photoUrl;
+      }
+
       const result = await Notifications.scheduleNotificationAsync({
         content: {
           title: 'Mood Sharing',
@@ -356,17 +351,7 @@ class NotificationService {
           sound: false, // Não toca som para notificação persistente
           priority: (Notifications as any).AndroidNotificationPriority?.MAX || 2,
           ...(Notifications as any).AndroidNotificationVisibility && {
-            android: {
-              channelId: CONFIG.NOTIFICATION_CHANNEL_ID,
-              priority: (Notifications as any).AndroidNotificationPriority?.MAX || 2,
-              visibility: (Notifications as any).AndroidNotificationVisibility?.PUBLIC || 1, // PUBLIC = visível na tela bloqueada
-              imageUrl: photoUrl,
-              sound: null, // Sem som para notificação persistente
-              vibrate: null, // Sem vibração para notificação persistente
-              ongoing: true, // Notificação contínua (persistente)
-              autoCancel: false, // Não cancela automaticamente
-              showWhen: true, // Mostra quando foi criada
-            },
+            android: androidPayload,
           },
           ...(Notifications as any).iOS && {
             ios: {

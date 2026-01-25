@@ -1,7 +1,10 @@
 import { Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
+import { getStore } from '@netlify/blobs';
 import { User } from '../models/User';
+import { isServerless, uploadDir } from '../config/uploads';
 
 const deleteFileIfExists = async (filePath: string): Promise<void> => {
   try {
@@ -13,11 +16,24 @@ const deleteFileIfExists = async (filePath: string): Promise<void> => {
   }
 };
 
+const getUserPhotoStore = () => getStore('user-photos');
+
+const getExtensionFromMime = (mimeType?: string): string => {
+  switch (mimeType) {
+    case 'image/png':
+      return '.png';
+    case 'image/webp':
+      return '.webp';
+    case 'image/jpeg':
+    default:
+      return '.jpg';
+  }
+};
+
 export const uploadUserPhoto = async (req: Request, res: Response): Promise<void> => {
   const uploadedFilename = req.file?.filename;
-  const uploadedPath = uploadedFilename
-    ? path.resolve(process.cwd(), 'uploads', uploadedFilename)
-    : null;
+  const uploadedPath =
+    !isServerless && uploadedFilename ? path.resolve(uploadDir, uploadedFilename) : null;
 
   try {
     const userId = (req as any).user?.userId;
@@ -41,23 +57,51 @@ export const uploadUserPhoto = async (req: Request, res: Response): Promise<void
     }
 
     const previousFilename = user.photoFilename;
-    const filename = req.file.filename;
-    const photoUrl = `/uploads/${filename}`;
 
-    user.photoFilename = filename;
-    user.photoUrl = photoUrl;
-    user.photoUploadedAt = new Date();
-    await user.save();
+    if (isServerless) {
+      if (!req.file?.buffer) {
+        res.status(400).json({ success: false, error: 'Arquivo inválido' });
+        return;
+      }
 
-    if (previousFilename) {
-      const previousPath = path.resolve(process.cwd(), 'uploads', previousFilename);
-      await deleteFileIfExists(previousPath);
+      const extension = getExtensionFromMime(req.file.mimetype);
+      const filename = `${crypto.randomUUID()}${extension}`;
+      const photoUrl = `/api/uploads/${filename}`;
+      const store = getUserPhotoStore();
+
+      await store.set(filename, req.file.buffer, {
+        metadata: {
+          contentType: req.file.mimetype,
+        },
+      });
+
+      user.photoFilename = filename;
+      user.photoUrl = photoUrl;
+      user.photoUploadedAt = new Date();
+      await user.save();
+
+      if (previousFilename) {
+        await store.delete(previousFilename);
+      }
+    } else {
+      const filename = req.file.filename;
+      const photoUrl = `/uploads/${filename}`;
+
+      user.photoFilename = filename;
+      user.photoUrl = photoUrl;
+      user.photoUploadedAt = new Date();
+      await user.save();
+
+      if (previousFilename) {
+        const previousPath = path.resolve(uploadDir, previousFilename);
+        await deleteFileIfExists(previousPath);
+      }
     }
 
     res.json({
       success: true,
       data: {
-        photoUrl,
+        photoUrl: user.photoUrl,
         photoUploadedAt: user.photoUploadedAt,
       },
     });
@@ -102,6 +146,44 @@ export const getUserPhoto = async (req: Request, res: Response): Promise<void> =
     });
   } catch (error: any) {
     console.error('Erro ao buscar foto:', error);
+    res.status(500).json({ success: false, error: 'Erro ao buscar foto' });
+  }
+};
+
+export const getPublicUserPhoto = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const key = req.params.key;
+    if (!key) {
+      res.status(400).json({ success: false, error: 'Chave inválida' });
+      return;
+    }
+
+    if (!isServerless) {
+      const filePath = path.resolve(uploadDir, key);
+      res.sendFile(filePath, err => {
+        if (err) {
+          res.status(404).json({ success: false, error: 'Foto não encontrada' });
+        }
+      });
+      return;
+    }
+
+    const store = getUserPhotoStore();
+    const result = await store.getWithMetadata(key, { type: 'arrayBuffer' });
+
+    if (!result || !result.data) {
+      res.status(404).json({ success: false, error: 'Foto não encontrada' });
+      return;
+    }
+
+    const metadata = result.metadata as { contentType?: string } | undefined;
+    const contentType = metadata?.contentType || 'application/octet-stream';
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.send(Buffer.from(result.data));
+  } catch (error: any) {
+    console.error('Erro ao buscar foto pública:', error);
     res.status(500).json({ success: false, error: 'Erro ao buscar foto' });
   }
 };

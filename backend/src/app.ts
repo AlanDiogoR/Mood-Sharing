@@ -7,7 +7,8 @@ import authRoutes from './routes/authRoutes';
 import moodRoutes from './routes/moodRoutes';
 import userRoutes from './routes/userRoutes';
 import mediaRoutes from './routes/mediaRoutes';
-import { uploadDir } from './config/uploads';
+import { uploadDir, isServerless } from './config/uploads';
+import { getPublicUserPhoto } from './controllers/userController';
 
 // Carrega variáveis de ambiente
 dotenv.config();
@@ -42,7 +43,9 @@ app.use(cors(corsOptions));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(uploadDir));
+if (!isServerless) {
+  app.use('/uploads', express.static(uploadDir));
+}
 
 // Health check
 app.get('/health', (req, res) => {
@@ -54,6 +57,7 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
+app.get('/api/uploads/:key', getPublicUserPhoto);
 app.use('/api/auth', authRoutes);
 app.use('/api/moods', moodRoutes);
 app.use('/api/users', userRoutes);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, View, Text, ImageStyle } from 'react-native';
 import { COLORS } from '../../constants/colors';
 
@@ -10,7 +10,13 @@ interface AvatarProps {
 }
 
 export const Avatar: React.FC<AvatarProps> = ({ uri, size = 72, fallbackText, style }) => {
-  if (!uri) {
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [uri]);
+
+  if (!uri || hasError) {
     return (
       <View style={[styles.placeholder, { width: size, height: size, borderRadius: size / 2 }]}>
         <Text style={styles.placeholderText}>{fallbackText || '🙂'}</Text>
@@ -22,6 +28,7 @@ export const Avatar: React.FC<AvatarProps> = ({ uri, size = 72, fallbackText, st
     <Image
       source={{ uri }}
       style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }, style]}
+      onError={() => setHasError(true)}
     />
   );
 };

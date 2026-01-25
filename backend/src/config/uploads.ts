@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 
-const isServerless = !!process.env.NETLIFY || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+export const isServerless = !!process.env.NETLIFY || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
 
 export const uploadDir = isServerless
   ? path.join('/tmp', 'uploads')

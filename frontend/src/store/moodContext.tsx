@@ -4,6 +4,7 @@ import {moodService} from '../services/moodService';
 import {locationService} from '../services/locationService';
 import {notificationService} from '../services/notificationService';
 import {calculateDistance, isWithinProximity} from '../utils/distance';
+import {getAbsoluteUrl} from '../utils/url';
 import {CONFIG} from '../constants/config';
 import {useAuth} from './authContext';
 
@@ -143,10 +144,11 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
       }
 
       // Atualiza notificação da tela bloqueada quando os humores mudam
-      if (currentResponse.success && currentResponse.data && user?.photoUrl) {
+      if (currentResponse.success && currentResponse.data) {
         const partnerName = user?.partnerId || 'Parceiro';
+        const absolutePhotoUrl = getAbsoluteUrl(user?.photoUrl);
         await notificationService.updateLockScreenNotification(
-          user.photoUrl,
+          absolutePhotoUrl,
           currentResponse.data.type,
           currentResponse.data.message,
           partnerResponse.success && partnerResponse.data ? partnerResponse.data.type : undefined,
@@ -182,16 +184,15 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
         }
 
         // Atualiza notificação da tela bloqueada após atualizar humor
-        if (user.photoUrl) {
-          const partnerName = user.partnerId || 'Parceiro';
-          await notificationService.updateLockScreenNotification(
-            user.photoUrl,
-            response.data.type,
-            response.data.message,
-            partnerMood?.type,
-            partnerMood ? partnerName : undefined
-          );
-        }
+        const partnerName = user.partnerId || 'Parceiro';
+        const absolutePhotoUrl = getAbsoluteUrl(user?.photoUrl);
+        await notificationService.updateLockScreenNotification(
+          absolutePhotoUrl,
+          response.data.type,
+          response.data.message,
+          partnerMood?.type,
+          partnerMood ? partnerName : undefined
+        );
       } else {
         throw new Error(response.error || 'Erro ao atualizar estado');
       }

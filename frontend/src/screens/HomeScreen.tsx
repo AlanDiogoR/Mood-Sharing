@@ -97,8 +97,8 @@ export const HomeScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    const photoUrl = getAbsoluteUrl(user?.photoUrl);
-    if (photoUrl && currentMood) {
+    if (currentMood) {
+      const photoUrl = getAbsoluteUrl(user?.photoUrl);
       const partnerName = user?.partnerId || 'Parceiro';
       notificationService.updateLockScreenNotification(
         photoUrl,

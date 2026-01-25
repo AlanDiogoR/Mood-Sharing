@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import serverless from 'serverless-http';
+import { connectLambda } from '@netlify/blobs';
 import { app } from '../../backend/src/app';
 import { connectDatabase } from '../../backend/src/config/database';
 import { initializeFirebaseAdmin } from '../../backend/src/services/firebaseAdmin';
@@ -22,6 +23,7 @@ const ensureInitialized = async () => {
 const handler = serverless(app);
 
 export const handler = async (event: any, context: any) => {
+  connectLambda(event);
   await ensureInitialized();
   return handler(event, context);
 };
