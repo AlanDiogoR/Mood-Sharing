@@ -6,6 +6,9 @@ export interface IUser extends Document {
   name: string;
   partnerId?: mongoose.Types.ObjectId;
   fcmToken?: string; // Token FCM para notificações push
+  photoUrl?: string;
+  photoFilename?: string;
+  photoUploadedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +43,18 @@ const UserSchema = new Schema<IUser>(
       default: null,
       index: true,
     },
+    photoUrl: {
+      type: String,
+      default: null,
+    },
+    photoFilename: {
+      type: String,
+      default: null,
+    },
+    photoUploadedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -48,5 +63,14 @@ const UserSchema = new Schema<IUser>(
 
 // Índices (email já tem unique: true que cria índice automaticamente)
 UserSchema.index({ partnerId: 1 });
+
+UserSchema.set('toJSON', {
+  virtuals: true,
+  versionKey: false,
+  transform: (_doc, ret) => {
+    ret.id = ret._id;
+    delete ret._id;
+  },
+});
 
 export const User = mongoose.model<IUser>('User', UserSchema);

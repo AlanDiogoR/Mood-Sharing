@@ -3,6 +3,8 @@ export interface User {
   email: string;
   name: string;
   partnerId?: string;
+  photoUrl?: string | null;
+  photoUploadedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -68,4 +70,17 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   message?: string;
+}
+
+export type MediaType = 'movie' | 'series';
+
+export interface MediaItem {
+  id: string;
+  userId: string;
+  title: string;
+  type: MediaType;
+  notes?: string | null;
+  orderIndex?: number | null;
+  createdAt: string;
+  updatedAt: string;
 }

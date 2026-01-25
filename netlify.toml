@@ -1,0 +1,7 @@
+[build]
+  command = "npm --prefix backend install && npm --prefix backend run build"
+  functions = "netlify/functions"
+  publish = "netlify/public"
+
+[functions]
+  node_bundler = "esbuild"

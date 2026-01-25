@@ -60,6 +60,7 @@ async function getNotifications(): Promise<any> {
 class NotificationService {
   private expoPushToken: string | null = null;
   private isInitialized: boolean = false;
+  private lockScreenNotificationId: string | null = null;
 
   async initialize(): Promise<void> {
     // No Expo Go, não inicializa push notifications para evitar avisos
@@ -280,6 +281,67 @@ class NotificationService {
   async unsubscribeFromTopic(topic: string): Promise<void> {
     // Expo notifications don't have topic subscription like FCM
     console.log('Topic unsubscription should be handled by backend:', topic);
+  }
+
+  async updateLockScreenNotification(
+    photoUrl: string,
+    moodType: MoodType,
+    moodMessage?: string
+  ): Promise<void> {
+    if (isExpoGo) {
+      return;
+    }
+
+    const Notifications = await getNotifications();
+    if (!Notifications) {
+      return;
+    }
+
+    try {
+      if (this.lockScreenNotificationId) {
+        await Notifications.dismissNotificationAsync(this.lockScreenNotificationId);
+        this.lockScreenNotificationId = null;
+      }
+
+      const emojiMap: Record<MoodType, string> = {
+        [MoodType.HAPPY]: '😊',
+        [MoodType.SAD]: '😢',
+        [MoodType.ANXIOUS]: '😰',
+        [MoodType.CALM]: '😌',
+        [MoodType.EXCITED]: '🤩',
+        [MoodType.TIRED]: '😴',
+        [MoodType.ANGRY]: '😠',
+        [MoodType.LOVE]: '❤️',
+      };
+
+      const emoji = emojiMap[moodType] || '😊';
+
+      const result = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Seu humor atual',
+          body: moodMessage ? `${moodType} ${emoji} — ${moodMessage}` : `${moodType} ${emoji}`,
+          sound: true,
+          priority: (Notifications as any).AndroidNotificationPriority?.HIGH || 1,
+          ...(Notifications as any).AndroidNotificationVisibility && {
+            android: {
+              channelId: CONFIG.NOTIFICATION_CHANNEL_ID,
+              priority: (Notifications as any).AndroidNotificationPriority?.HIGH || 1,
+              visibility: (Notifications as any).AndroidNotificationVisibility?.PUBLIC || 1,
+              imageUrl: photoUrl,
+              sound: 'default',
+              vibrate: [0, 250, 250, 250],
+            },
+          },
+        },
+        trigger: null,
+      });
+
+      this.lockScreenNotificationId = result;
+    } catch (error) {
+      if (!isExpoGo) {
+        console.error('Error sending lock screen notification:', error);
+      }
+    }
   }
 }
 

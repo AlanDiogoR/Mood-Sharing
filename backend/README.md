@@ -49,6 +49,34 @@ npm run build
 npm start
 ```
 
+## ☁️ Deploy na Netlify (Functions)
+
+Este backend é um servidor Express. Para rodar na Netlify gratuita, ele é exposto como Function serverless.
+
+### Passos
+1. **Crie um site na Netlify** apontando para este repositório.
+2. **Build settings** (já configurado no `netlify.toml`):
+   - Build command: `npm --prefix backend install && npm --prefix backend run build`
+   - Functions directory: `netlify/functions`
+3. **Variáveis de ambiente** (Site settings → Environment variables):
+   - `MONGODB_URI` (MongoDB Atlas)
+   - `JWT_SECRET`
+   - `JWT_REFRESH_SECRET`
+   - `JWT_EXPIRES_IN`
+   - `JWT_REFRESH_EXPIRES_IN`
+   - `CORS_ORIGINS` (ex: `https://seu-site.netlify.app,http://localhost:19006`)
+   - `NODE_ENV=production`
+   - Opcional para Firebase: `FIREBASE_PROJECT_ID`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_CLIENT_EMAIL`
+
+### URL base da API
+As rotas ficam sob o prefixo da Function:
+```
+https://<site>.netlify.app/.netlify/functions/api
+```
+Exemplos:
+- Health check: `/.netlify/functions/api/health`
+- Login: `/.netlify/functions/api/auth/login`
+
 ## 📡 Endpoints da API
 
 ### Autenticação

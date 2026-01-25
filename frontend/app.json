@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mood Sharing",
     "slug": "mood-sharing-app",
-    "version": "1.0.2",
+    "version": "2.0.0",
     "sdkVersion": "54.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -18,6 +18,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.moodsharing.app",
+      "buildNumber": "2",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Precisamos da sua localização para mostrar quando você está próximo do seu parceiro",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Precisamos da sua localização em background para detectar proximidade",
@@ -29,6 +30,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0d1117"
       },
+      "versionCode": 2,
       "package": "com.moodsharing.app",
       "googleServicesFile": "./android/app/google-services.json",
       "permissions": [
@@ -50,6 +52,12 @@
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Precisamos da sua localização em background para detectar proximidade"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Precisamos acessar sua galeria para atualizar sua foto"
         }
       ],
       [

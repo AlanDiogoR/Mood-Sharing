@@ -61,7 +61,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     const refreshToken = generateRefreshToken(tokenPayload);
 
     // Remove a senha da resposta
-    const userResponse = user.toObject();
+    const userResponse = user.toJSON();
     delete userResponse.password;
 
     res.status(201).json({
@@ -128,7 +128,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const refreshToken = generateRefreshToken(tokenPayload);
 
     // Remove a senha da resposta
-    const userResponse = user.toObject();
+    const userResponse = user.toJSON();
     delete userResponse.password;
 
     res.json({
@@ -270,7 +270,7 @@ export const linkPartner = async (req: Request, res: Response): Promise<void> =>
     await user.save();
     await partner.save();
 
-    const userResponse = user.toObject();
+    const userResponse = user.toJSON();
     delete userResponse.password;
 
     res.json({

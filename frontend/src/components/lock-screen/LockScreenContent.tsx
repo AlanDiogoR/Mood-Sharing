@@ -4,6 +4,8 @@ import {useMood} from '../../store/moodContext';
 import {useAuth} from '../../store/authContext';
 import {COLORS} from '../../constants/colors';
 import {MoodType} from '../../types';
+import {Avatar} from '../common/Avatar';
+import {getAbsoluteUrl} from '../../utils/url';
 
 const {width} = Dimensions.get('window');
 
@@ -34,7 +36,7 @@ interface LockScreenContentProps {
 }
 
 export const LockScreenContent: React.FC<LockScreenContentProps> = ({onUnlock}) => {
-  const {partnerMood} = useMood();
+  const {partnerMood, currentMood} = useMood();
   const {user} = useAuth();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -81,7 +83,7 @@ export const LockScreenContent: React.FC<LockScreenContentProps> = ({onUnlock}) 
   }, []);
 
   const partnerName = user?.partnerId || 'Seu parceiro';
-  const moodType = partnerMood?.type || MoodType.HAPPY;
+  const moodType = currentMood?.type || MoodType.HAPPY;
   const emoji = MOOD_EMOJIS[moodType];
   const message = MOOD_MESSAGES[moodType];
 
@@ -105,12 +107,20 @@ export const LockScreenContent: React.FC<LockScreenContentProps> = ({onUnlock}) 
           {emoji}
         </Animated.Text>
 
-        <Text style={styles.name}>{partnerName}</Text>
-        <Text style={styles.message}>{message}</Text>
+        <Avatar uri={getAbsoluteUrl(user?.photoUrl)} size={120} />
+        <Text style={styles.name}>{user?.name || 'Você'}</Text>
+        <Text style={styles.message}>Você {message}</Text>
 
-        {partnerMood?.message && (
+        {currentMood?.message && (
           <View style={styles.messageContainer}>
-            <Text style={styles.customMessage}>"{partnerMood.message}"</Text>
+            <Text style={styles.customMessage}>"{currentMood.message}"</Text>
+          </View>
+        )}
+
+        {partnerMood && (
+          <View style={styles.partnerContainer}>
+            <Text style={styles.partnerName}>{partnerName}</Text>
+            <Text style={styles.partnerMessage}>Parceiro {MOOD_MESSAGES[partnerMood.type]}</Text>
           </View>
         )}
 
@@ -140,6 +150,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: COLORS.text,
+    marginTop: 16,
     marginBottom: 8,
   },
   message: {
@@ -168,5 +179,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textMuted,
     marginTop: 32,
+  },
+  partnerContainer: {
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  partnerName: {
+    fontSize: 16,
+    color: COLORS.text,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  partnerMessage: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
   },
 });

@@ -1,5 +1,14 @@
 import React, {useState, useEffect} from 'react';
-import {View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl} from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+  Alert,
+} from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import {useAuth} from '../store/authContext';
 import {useMood} from '../store/moodContext';
 import {MoodSelector} from '../components/mood-selector/MoodSelector';
@@ -8,14 +17,21 @@ import {Input} from '../components/common/Input';
 import {COLORS} from '../constants/colors';
 import {MoodType} from '../types';
 import {LockScreen} from './LockScreen';
+import {Avatar} from '../components/common/Avatar';
+import {userService} from '../services/userService';
+import {getAbsoluteUrl} from '../utils/url';
+import {notificationService} from '../services/notificationService';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 export const HomeScreen: React.FC = () => {
-  const {user, logout} = useAuth();
+  const {user, logout, refreshUser} = useAuth();
   const {currentMood, partnerMood, updateMood, refreshMoods, isLoading, isNearby, distance} =
     useMood();
+  const insets = useSafeAreaInsets();
   const [selectedMood, setSelectedMood] = useState<MoodType | undefined>(currentMood?.type);
   const [message, setMessage] = useState('');
   const [isLocked, setIsLocked] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   useEffect(() => {
     if (currentMood) {
@@ -41,6 +57,52 @@ export const HomeScreen: React.FC = () => {
     setIsLocked(false);
   };
 
+  const handlePhotoUpload = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permissão necessária', 'Autorize o acesso à galeria para enviar uma foto.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets?.length) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      if (!asset.uri || !asset.mimeType) {
+        Alert.alert('Erro', 'Não foi possível ler a imagem selecionada');
+        return;
+      }
+
+      setIsUploadingPhoto(true);
+      const filename = asset.fileName || `photo-${Date.now()}.jpg`;
+      const response = await userService.uploadMyPhoto(asset.uri, asset.mimeType, filename);
+
+      if (response.success) {
+        await refreshUser();
+      } else {
+        Alert.alert('Erro', response.error || 'Falha ao enviar foto');
+      }
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao enviar foto');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  useEffect(() => {
+    const photoUrl = getAbsoluteUrl(user?.photoUrl);
+    if (photoUrl && currentMood) {
+      notificationService.updateLockScreenNotification(photoUrl, currentMood.type, currentMood.message);
+    }
+  }, [user?.photoUrl, currentMood]);
+
   if (isLocked) {
     return <LockScreen onUnlock={handleUnlock} />;
   }
@@ -48,9 +110,20 @@ export const HomeScreen: React.FC = () => {
   return (
     <ScrollView
       style={styles.container}
+      contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refreshMoods} />}>
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Olá, {user?.name}!</Text>
+      <View style={[styles.header, {paddingTop: 20 + insets.top}]}>
+        <View style={styles.headerLeft}>
+          <Avatar uri={getAbsoluteUrl(user?.photoUrl)} size={56} />
+          <View style={styles.headerText}>
+            <Text style={styles.greeting}>Olá, {user?.name}!</Text>
+            <TouchableOpacity onPress={handlePhotoUpload} disabled={isUploadingPhoto}>
+              <Text style={styles.photoLink}>
+                {isUploadingPhoto ? 'Enviando...' : 'Atualizar foto'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         <TouchableOpacity onPress={logout} style={styles.logoutButton}>
           <Text style={styles.logoutText}>Sair</Text>
         </TouchableOpacity>
@@ -143,6 +216,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  content: {
+    paddingBottom: 140,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -150,10 +226,24 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 60,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  headerText: {
+    marginLeft: 12,
+    flex: 1,
+  },
   greeting: {
     fontSize: 24,
     fontWeight: 'bold',
     color: COLORS.text,
+  },
+  photoLink: {
+    color: COLORS.primary,
+    fontSize: 14,
+    marginTop: 4,
   },
   logoutButton: {
     padding: 8,
