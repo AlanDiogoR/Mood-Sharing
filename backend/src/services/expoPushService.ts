@@ -1,4 +1,4 @@
-import { Expo } from 'expo-server-sdk';
+import { Expo, ExpoPushMessage } from 'expo-server-sdk';
 import { MoodType } from '../models/Mood';
 
 // Cria uma instância do cliente Expo
@@ -50,7 +50,7 @@ export async function sendMoodChangeNotification(
   const emoji = moodEmojis[moodType] || '😊';
   const bodyText = message || `${partnerName} ${moodMessages[moodType]} ${emoji}`;
 
-  const messages = [
+  const messages: ExpoPushMessage[] = [
     {
       to: expoPushToken,
       sound: 'default',
@@ -109,7 +109,7 @@ export async function sendProximityNotification(
     return;
   }
 
-  const messages = [
+  const messages: ExpoPushMessage[] = [
     {
       to: expoPushToken,
       sound: 'default',
