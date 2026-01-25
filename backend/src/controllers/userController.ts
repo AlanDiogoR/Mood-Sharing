@@ -69,8 +69,11 @@ export const uploadUserPhoto = async (req: Request, res: Response): Promise<void
       const photoUrl = `/api/uploads/${filename}`;
       const store = getUserPhotoStore();
 
-      const blobPayload = new Uint8Array(req.file.buffer);
-      await store.set(filename, blobPayload, {
+      const arrayBuffer = req.file.buffer.buffer.slice(
+        req.file.buffer.byteOffset,
+        req.file.buffer.byteOffset + req.file.buffer.byteLength
+      );
+      await store.set(filename, arrayBuffer, {
         metadata: {
           contentType: req.file.mimetype,
         },
