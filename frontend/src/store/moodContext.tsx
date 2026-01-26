@@ -214,11 +214,11 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
 
       const partnerName = resolvedPartnerUser?.name || 'Parceiro';
       const partnerPhotoUrl = getAbsoluteUrl(resolvedPartnerUser?.photoUrl);
+      const partnerData = partnerResponse.success ? partnerResponse.data : undefined;
 
       // Atualiza notificação da tela bloqueada quando os humores mudam
       if (currentResponse.success && currentResponse.data) {
         const absolutePhotoUrl = null;
-        const partnerData = partnerResponse.success ? partnerResponse.data : undefined;
         const lockscreenKey = JSON.stringify({
           photoUrl: absolutePhotoUrl,
           moodType: currentResponse.data.type,
@@ -240,10 +240,10 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
           );
         }
 
-        if (partnerData) {
+        if (user.partnerId && resolvedPartnerUser) {
           const widgetKey = JSON.stringify({
-            partnerType: partnerData.type,
-            partnerMessage: partnerData.message || '',
+            partnerType: partnerData?.type || '',
+            partnerMessage: partnerData?.message || '',
             partnerName,
             partnerPhotoUrl: partnerPhotoUrl || '',
             partnerDistanceKm: distance ?? null,
@@ -253,9 +253,9 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
             lastWidgetKeyRef.current = widgetKey;
             widgetService.updatePartnerMoodWidget(
               partnerName,
-              partnerData.message || '',
+              partnerData?.message || '',
               partnerPhotoUrl,
-              partnerData.type,
+              partnerData?.type || null,
               distance ?? null
             );
           }

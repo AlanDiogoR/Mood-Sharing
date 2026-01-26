@@ -171,11 +171,11 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.headerLeft}>
           <TouchableOpacity
             onPress={() => {
-              if (user?.email === 'alandiogor@gmail.com') {
+              if (user?.email?.toLowerCase() === 'alandiogor@gmail.com') {
                 navigation.navigate('SpecialArea' as never);
               }
             }}
-            activeOpacity={user?.email === 'alandiogor@gmail.com' ? 0.7 : 1}>
+            activeOpacity={user?.email?.toLowerCase() === 'alandiogor@gmail.com' ? 0.7 : 1}>
             <Avatar uri={localPhotoUri || getAbsoluteUrl(user?.photoUrl)} size={56} />
           </TouchableOpacity>
           <View style={styles.headerText}>
