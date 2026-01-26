@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -39,9 +40,18 @@
             android:orientation="vertical">
 
             <TextView
+                android:id="@+id/widget_partner_greeting"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Bom dia"
+                android:textSize="12sp"
+                android:textColor="#E3E7FF" />
+
+            <TextView
                 android:id="@+id/widget_partner_name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
                 android:text="Parceiro"
                 android:textSize="16sp"
                 android:textStyle="bold"
@@ -55,6 +65,24 @@
                 android:text="Atualizou o humor"
                 android:textSize="14sp"
                 android:textColor="@android:color/white" />
+
+            <TextView
+                android:id="@+id/widget_partner_mood"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="😊 Feliz"
+                android:textSize="13sp"
+                android:textColor="#DDE4FF" />
+
+            <TextView
+                android:id="@+id/widget_partner_distance"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Distância: -- km"
+                android:textSize="12sp"
+                android:textColor="#B8C0D9" />
         </LinearLayout>
     </LinearLayout>
 

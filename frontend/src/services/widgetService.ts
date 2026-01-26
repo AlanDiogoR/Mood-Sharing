@@ -1,9 +1,16 @@
 import { NativeModules, Platform } from 'react-native';
+import { MoodType } from '../types';
 
 const { MoodWidgetModule } = NativeModules;
 
 export const widgetService = {
-  updatePartnerMoodWidget: (partnerName: string, message: string, partnerPhotoUrl?: string | null) => {
+  updatePartnerMoodWidget: (
+    partnerName: string,
+    message: string,
+    partnerPhotoUrl?: string | null,
+    partnerMoodType?: MoodType | null,
+    partnerDistanceKm?: number | null
+  ) => {
     if (Platform.OS !== 'android') {
       return;
     }
@@ -13,6 +20,17 @@ export const widgetService = {
     const safeName = partnerName?.trim() || 'Parceiro';
     const safeMessage = message?.trim() || 'Atualizou o humor';
     const safePhotoUrl = partnerPhotoUrl?.trim() || null;
-    MoodWidgetModule.updateMoodWidget(safeName, safeMessage, safePhotoUrl);
+    const safeMoodType = partnerMoodType || null;
+    const safeDistanceKm =
+      typeof partnerDistanceKm === 'number' && Number.isFinite(partnerDistanceKm)
+        ? partnerDistanceKm
+        : null;
+    MoodWidgetModule.updateMoodWidget(
+      safeName,
+      safeMessage,
+      safePhotoUrl,
+      safeMoodType,
+      safeDistanceKm
+    );
   },
 };

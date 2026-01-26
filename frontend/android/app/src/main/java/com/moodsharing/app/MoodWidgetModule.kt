@@ -13,13 +13,22 @@ class MoodWidgetModule(private val reactContext: ReactApplicationContext) :
   override fun getName(): String = "MoodWidgetModule"
 
   @ReactMethod
-  fun updateMoodWidget(partnerName: String?, partnerMessage: String?, partnerPhotoUrl: String?) {
+  fun updateMoodWidget(
+    partnerName: String?,
+    partnerMessage: String?,
+    partnerPhotoUrl: String?,
+    partnerMoodType: String?,
+    partnerDistanceKm: Double?
+  ) {
     val prefs = reactContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     val safePhotoUrl = partnerPhotoUrl?.trim()?.takeIf { it.isNotEmpty() }
+    val safeMoodType = partnerMoodType?.trim()?.takeIf { it.isNotEmpty() }
     prefs.edit()
       .putString(KEY_PARTNER_NAME, partnerName ?: "Parceiro")
       .putString(KEY_PARTNER_MESSAGE, partnerMessage ?: "Atualizou o humor")
       .putString(KEY_PARTNER_PHOTO, safePhotoUrl)
+      .putString(KEY_PARTNER_MOOD_TYPE, safeMoodType)
+      .putFloat(KEY_PARTNER_DISTANCE, partnerDistanceKm?.toFloat() ?: -1f)
       .putLong(KEY_UPDATED_AT, System.currentTimeMillis())
       .apply()
 
@@ -37,5 +46,7 @@ class MoodWidgetModule(private val reactContext: ReactApplicationContext) :
     private const val KEY_PARTNER_MESSAGE = "partnerMessage"
     private const val KEY_UPDATED_AT = "updatedAt"
     private const val KEY_PARTNER_PHOTO = "partnerPhotoUrl"
+    private const val KEY_PARTNER_MOOD_TYPE = "partnerMoodType"
+    private const val KEY_PARTNER_DISTANCE = "partnerDistanceKm"
   }
 }

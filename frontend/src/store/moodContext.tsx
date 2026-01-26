@@ -239,11 +239,18 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
             partnerMessage: partnerData.message || '',
             partnerName,
             partnerPhotoUrl: partnerPhotoUrl || '',
+            partnerDistanceKm: distance ?? null,
           });
 
           if (lastWidgetKeyRef.current !== widgetKey) {
             lastWidgetKeyRef.current = widgetKey;
-            widgetService.updatePartnerMoodWidget(partnerName, partnerData.message || '', partnerPhotoUrl);
+            widgetService.updatePartnerMoodWidget(
+              partnerName,
+              partnerData.message || '',
+              partnerPhotoUrl,
+              partnerData.type,
+              distance ?? null
+            );
           }
         }
       }

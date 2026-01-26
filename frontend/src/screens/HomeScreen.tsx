@@ -20,6 +20,7 @@ import {LockScreen} from './LockScreen';
 import {Avatar} from '../components/common/Avatar';
 import {userService} from '../services/userService';
 import {getAbsoluteUrl} from '../utils/url';
+import {storage} from '../utils/storage';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 export const HomeScreen: React.FC = () => {
@@ -31,6 +32,15 @@ export const HomeScreen: React.FC = () => {
   const [message, setMessage] = useState('');
   const [isLocked, setIsLocked] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [localPhotoUri, setLocalPhotoUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadLocalPhoto = async () => {
+      const storedUri = await storage.getLastUploadedPhotoUri();
+      setLocalPhotoUri(storedUri);
+    };
+    loadLocalPhoto();
+  }, []);
 
   useEffect(() => {
     if (currentMood) {
@@ -84,6 +94,8 @@ export const HomeScreen: React.FC = () => {
       const response = await userService.uploadMyPhoto(asset.uri, asset.mimeType, filename);
 
       if (response.success) {
+        await storage.setLastUploadedPhotoUri(asset.uri);
+        setLocalPhotoUri(asset.uri);
         await refreshUser();
       } else {
         Alert.alert('Erro', response.error || 'Falha ao enviar foto');
@@ -106,7 +118,7 @@ export const HomeScreen: React.FC = () => {
       refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refreshMoods} />}>
       <View style={[styles.header, {paddingTop: 20 + insets.top}]}>
         <View style={styles.headerLeft}>
-          <Avatar uri={getAbsoluteUrl(user?.photoUrl)} size={56} />
+          <Avatar uri={localPhotoUri || getAbsoluteUrl(user?.photoUrl)} size={56} />
           <View style={styles.headerText}>
             <Text style={styles.greeting}>Olá, {user?.name}!</Text>
             <TouchableOpacity onPress={handlePhotoUpload} disabled={isUploadingPhoto}>

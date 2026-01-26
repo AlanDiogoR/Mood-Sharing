@@ -2,6 +2,10 @@
 
 Um aplicativo React Native que permite que casais compartilhem seus estados emocionais em tempo real. O app exibe o estado emocional do parceiro na tela de bloqueio e atualiza automaticamente para "feliz" quando os dois estão próximos (menos de 1km de distância).
 
+## ✅ Status
+
+Este projeto está em produção e recebe melhorias contínuas no app e no backend.
+
 ## 🚀 Funcionalidades
 
 - **Autenticação**: Login e registro com JWT

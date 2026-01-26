@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mood Sharing",
     "slug": "mood-sharing-app",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "sdkVersion": "54.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -27,10 +27,10 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0d1117"
       },
-      "versionCode": 2,
+      "versionCode": 3,
       "package": "com.moodsharing.app",
       "googleServicesFile": "./android/app/google-services.json",
       "permissions": [

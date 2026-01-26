@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   USER_DATA: '@mood_app:user_data',
   IS_LOCKED: '@mood_app:is_locked',
   LAST_ACTIVITY: '@mood_app:last_activity',
+  LAST_UPLOADED_PHOTO_URI: '@mood_app:last_uploaded_photo_uri',
 };
 
 export const storage = {
@@ -61,6 +62,14 @@ export const storage = {
   async getLastActivity(): Promise<number | null> {
     const data = await AsyncStorage.getItem(STORAGE_KEYS.LAST_ACTIVITY);
     return data ? parseInt(data, 10) : null;
+  },
+
+  async setLastUploadedPhotoUri(uri: string): Promise<void> {
+    await AsyncStorage.setItem(STORAGE_KEYS.LAST_UPLOADED_PHOTO_URI, uri);
+  },
+
+  async getLastUploadedPhotoUri(): Promise<string | null> {
+    return await AsyncStorage.getItem(STORAGE_KEYS.LAST_UPLOADED_PHOTO_URI);
   },
 
   async clearAll(): Promise<void> {
