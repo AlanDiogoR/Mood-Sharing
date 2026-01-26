@@ -9,6 +9,7 @@ export const MOOD_EMOJIS: Record<MoodType, string> = {
   [MoodType.TIRED]: '😴',
   [MoodType.ANGRY]: '😠',
   [MoodType.LOVE]: '❤️',
+  [MoodType.PARANOICA]: '😵‍💫',
 };
 
 export const getMoodEmoji = (type: MoodType): string => {

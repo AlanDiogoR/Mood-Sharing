@@ -33,6 +33,7 @@ export const COLORS = {
   tired: '#9e9e9e',
   angry: '#f44336',
   love: '#e91e63',
+  paranoica: '#7e57c2',
 
   // Border and divider
   border: '#2a2f3e',

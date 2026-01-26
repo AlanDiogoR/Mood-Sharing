@@ -7,6 +7,7 @@ const MOOD_OPTIONS: MoodOption[] = [
   {type: MoodType.HAPPY, emoji: '😊', label: 'Feliz', color: COLORS.happy},
   {type: MoodType.SAD, emoji: '😢', label: 'Triste', color: COLORS.sad},
   {type: MoodType.ANXIOUS, emoji: '😰', label: 'Ansioso', color: COLORS.anxious},
+  {type: MoodType.PARANOICA, emoji: '😵‍💫', label: 'Paranoica', color: COLORS.paranoica},
   {type: MoodType.CALM, emoji: '😌', label: 'Calmo', color: COLORS.calm},
   {type: MoodType.EXCITED, emoji: '🤩', label: 'Empolgado', color: COLORS.excited},
   {type: MoodType.TIRED, emoji: '😴', label: 'Cansado', color: COLORS.tired},

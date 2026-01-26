@@ -9,6 +9,7 @@ export enum MoodType {
   TIRED = 'tired',
   ANGRY = 'angry',
   LOVE = 'love',
+  PARANOICA = 'paranoica',
 }
 
 export interface ILocation {

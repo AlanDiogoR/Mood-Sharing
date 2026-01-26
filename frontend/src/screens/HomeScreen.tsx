@@ -34,6 +34,56 @@ export const HomeScreen: React.FC = () => {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [localPhotoUri, setLocalPhotoUri] = useState<string | null>(null);
 
+  const getMoodLabel = (type: MoodType): string => {
+    switch (type) {
+      case MoodType.HAPPY:
+        return 'Feliz';
+      case MoodType.SAD:
+        return 'Triste';
+      case MoodType.ANXIOUS:
+        return 'Ansioso';
+      case MoodType.PARANOICA:
+        return 'Paranoica';
+      case MoodType.CALM:
+        return 'Calmo';
+      case MoodType.EXCITED:
+        return 'Empolgado';
+      case MoodType.TIRED:
+        return 'Cansado';
+      case MoodType.ANGRY:
+        return 'Irritado';
+      case MoodType.LOVE:
+        return 'Apaixonado';
+      default:
+        return 'Humor';
+    }
+  };
+
+  const getMoodEmoji = (type: MoodType): string => {
+    switch (type) {
+      case MoodType.HAPPY:
+        return '😊';
+      case MoodType.SAD:
+        return '😢';
+      case MoodType.ANXIOUS:
+        return '😰';
+      case MoodType.PARANOICA:
+        return '😵‍💫';
+      case MoodType.CALM:
+        return '😌';
+      case MoodType.EXCITED:
+        return '🤩';
+      case MoodType.TIRED:
+        return '😴';
+      case MoodType.ANGRY:
+        return '😠';
+      case MoodType.LOVE:
+        return '❤️';
+      default:
+        return '🙂';
+    }
+  };
+
   useEffect(() => {
     const loadLocalPhoto = async () => {
       const storedUri = await storage.getLastUploadedPhotoUri();
@@ -145,17 +195,8 @@ export const HomeScreen: React.FC = () => {
         <Text style={styles.sectionTitle}>Seu Estado Atual</Text>
         {currentMood && (
           <View style={styles.currentMoodCard}>
-            <Text style={styles.currentMoodEmoji}>
-              {currentMood.type === MoodType.HAPPY && '😊'}
-              {currentMood.type === MoodType.SAD && '😢'}
-              {currentMood.type === MoodType.ANXIOUS && '😰'}
-              {currentMood.type === MoodType.CALM && '😌'}
-              {currentMood.type === MoodType.EXCITED && '🤩'}
-              {currentMood.type === MoodType.TIRED && '😴'}
-              {currentMood.type === MoodType.ANGRY && '😠'}
-              {currentMood.type === MoodType.LOVE && '❤️'}
-            </Text>
-            <Text style={styles.currentMoodType}>{currentMood.type}</Text>
+            <Text style={styles.currentMoodEmoji}>{getMoodEmoji(currentMood.type)}</Text>
+            <Text style={styles.currentMoodType}>{getMoodLabel(currentMood.type)}</Text>
             {currentMood.message && (
               <Text style={styles.currentMoodMessage}>{currentMood.message}</Text>
             )}
@@ -167,17 +208,8 @@ export const HomeScreen: React.FC = () => {
         <Text style={styles.sectionTitle}>Estado do Parceiro</Text>
         {partnerMood ? (
           <View style={styles.partnerMoodCard}>
-            <Text style={styles.partnerMoodEmoji}>
-              {partnerMood.type === MoodType.HAPPY && '😊'}
-              {partnerMood.type === MoodType.SAD && '😢'}
-              {partnerMood.type === MoodType.ANXIOUS && '😰'}
-              {partnerMood.type === MoodType.CALM && '😌'}
-              {partnerMood.type === MoodType.EXCITED && '🤩'}
-              {partnerMood.type === MoodType.TIRED && '😴'}
-              {partnerMood.type === MoodType.ANGRY && '😠'}
-              {partnerMood.type === MoodType.LOVE && '❤️'}
-            </Text>
-            <Text style={styles.partnerMoodType}>{partnerMood.type}</Text>
+            <Text style={styles.partnerMoodEmoji}>{getMoodEmoji(partnerMood.type)}</Text>
+            <Text style={styles.partnerMoodType}>{getMoodLabel(partnerMood.type)}</Text>
             {partnerMood.message && (
               <Text style={styles.partnerMoodMessage}>{partnerMood.message}</Text>
             )}

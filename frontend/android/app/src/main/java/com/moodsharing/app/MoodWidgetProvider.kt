@@ -48,6 +48,7 @@ class MoodWidgetProvider : AppWidgetProvider() {
         "happy" -> "😊 Feliz"
         "sad" -> "😢 Triste"
         "anxious" -> "😰 Ansioso"
+        "paranoica" -> "😵‍💫 Paranoica"
         "calm" -> "😌 Calmo"
         "excited" -> "🤩 Empolgado"
         "tired" -> "😴 Cansado"
