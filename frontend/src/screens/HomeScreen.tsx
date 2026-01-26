@@ -169,6 +169,9 @@ export const HomeScreen: React.FC = () => {
             {partnerMood.message && (
               <Text style={styles.partnerMoodMessage}>{partnerMood.message}</Text>
             )}
+            {distance !== null && (
+              <Text style={styles.distanceText}>Distância: {distance.toFixed(2)} km</Text>
+            )}
           </View>
         ) : (
           <View style={styles.noPartnerCard}>
@@ -315,6 +318,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textSecondary,
     textAlign: 'center',
+  },
+  distanceText: {
+    marginTop: 8,
+    fontSize: 13,
+    color: COLORS.textMuted,
+    fontWeight: '600',
   },
   noPartnerCard: {
     backgroundColor: COLORS.backgroundCard,

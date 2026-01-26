@@ -27,6 +27,7 @@ export const MediaScreen: React.FC = () => {
   const [mode, setMode] = useState<Mode>('create');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<MediaType | 'all'>('all');
+  const [showForm, setShowForm] = useState(false);
 
   const sortedItems = useMemo(() => {
     const hasManualOrder = items.some(item => item.orderIndex !== null && item.orderIndex !== undefined);
@@ -65,6 +66,12 @@ export const MediaScreen: React.FC = () => {
     setType('movie');
     setMode('create');
     setEditingId(null);
+    setShowForm(false);
+  };
+
+  const handleStartCreate = () => {
+    resetForm();
+    setShowForm(true);
   };
 
   const handleSubmit = async () => {
@@ -109,6 +116,7 @@ export const MediaScreen: React.FC = () => {
     setTitle(item.title);
     setNotes(item.notes || '');
     setType(item.type);
+    setShowForm(true);
   };
 
   const handleDelete = (item: MediaItem) => {
@@ -167,56 +175,15 @@ export const MediaScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
-  return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+  const renderHeader = () => (
+    <View>
       <View style={[styles.header, { paddingTop: 20 + insets.top }]}>
-        <Text style={styles.title}>Filmes e Séries</Text>
-      </View>
-
-      <View style={styles.form}>
-        <View style={styles.typeRow}>
-          <TouchableOpacity
-            style={[styles.typeChip, type === 'movie' && styles.typeChipActive]}
-            onPress={() => setType('movie')}>
-            <Text style={[styles.typeChipText, type === 'movie' && styles.typeChipTextActive]}>
-              Filme
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.typeChip, type === 'series' && styles.typeChipActive]}
-            onPress={() => setType('series')}>
-            <Text style={[styles.typeChipText, type === 'series' && styles.typeChipTextActive]}>
-              Série
-            </Text>
-          </TouchableOpacity>
+        <View>
+          <Text style={styles.title}>Filmes e Séries</Text>
         </View>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Título"
-          placeholderTextColor={COLORS.textMuted}
-          value={title}
-          onChangeText={setTitle}
-        />
-        <TextInput
-          style={[styles.input, styles.notesInput]}
-          placeholder="Notas (opcional)"
-          placeholderTextColor={COLORS.textMuted}
-          value={notes}
-          onChangeText={setNotes}
-          multiline
-        />
-
-        <View style={styles.formActions}>
-          <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit} disabled={loading}>
-            <Text style={styles.primaryButtonText}>{mode === 'create' ? 'Adicionar' : 'Salvar'}</Text>
-          </TouchableOpacity>
-          {mode === 'edit' && (
-            <TouchableOpacity style={styles.secondaryButton} onPress={resetForm}>
-              <Text style={styles.secondaryButtonText}>Cancelar</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        <TouchableOpacity style={styles.addButton} onPress={handleStartCreate}>
+          <Text style={styles.addButtonText}>+ Adicionar</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.filterRow}>
@@ -232,6 +199,58 @@ export const MediaScreen: React.FC = () => {
         ))}
       </View>
 
+      {showForm && (
+        <View style={styles.form}>
+          <View style={styles.typeRow}>
+            <TouchableOpacity
+              style={[styles.typeChip, type === 'movie' && styles.typeChipActive]}
+              onPress={() => setType('movie')}>
+              <Text style={[styles.typeChipText, type === 'movie' && styles.typeChipTextActive]}>
+                Filme
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.typeChip, type === 'series' && styles.typeChipActive]}
+              onPress={() => setType('series')}>
+              <Text style={[styles.typeChipText, type === 'series' && styles.typeChipTextActive]}>
+                Série
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Título"
+            placeholderTextColor={COLORS.textMuted}
+            value={title}
+            onChangeText={setTitle}
+          />
+          <TextInput
+            style={[styles.input, styles.notesInput]}
+            placeholder="Notas (opcional)"
+            placeholderTextColor={COLORS.textMuted}
+            value={notes}
+            onChangeText={setNotes}
+            multiline
+          />
+
+          <View style={styles.formActions}>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit} disabled={loading}>
+              <Text style={styles.primaryButtonText}>{mode === 'create' ? 'Adicionar' : 'Salvar'}</Text>
+            </TouchableOpacity>
+            {mode === 'edit' && (
+              <TouchableOpacity style={styles.secondaryButton} onPress={resetForm}>
+                <Text style={styles.secondaryButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+    </View>
+  );
+
+  return (
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <DraggableFlatList
         data={sortedItems}
         keyExtractor={item => item.id}
@@ -239,6 +258,7 @@ export const MediaScreen: React.FC = () => {
         onDragEnd={({ data }) => handleDragEnd(data)}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={renderHeader}
       />
     </KeyboardAvoidingView>
   );
@@ -248,11 +268,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    paddingHorizontal: 16,
   },
   header: {
     paddingTop: 60,
     paddingBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  addButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+  },
+  addButtonText: {
+    color: COLORS.background,
+    fontWeight: '700',
+    fontSize: 13,
   },
   title: {
     fontSize: 24,
@@ -354,6 +387,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 140,
+    paddingHorizontal: 16,
   },
   card: {
     backgroundColor: COLORS.backgroundCard,

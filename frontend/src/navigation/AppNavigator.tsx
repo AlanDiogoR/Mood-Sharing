@@ -6,6 +6,7 @@ import {useAuth} from '../store/authContext';
 import {LoginScreen} from '../screens/LoginScreen';
 import {HomeScreen} from '../screens/HomeScreen';
 import {MediaScreen} from '../screens/MediaScreen';
+import {NotesScreen} from '../screens/NotesScreen';
 import {COLORS} from '../constants/colors';
 
 const Stack = createStackNavigator();
@@ -55,6 +56,14 @@ const MainTabs: React.FC = () => {
         options={{
           tabBarLabel: 'Filmes/Séries',
           tabBarIcon: ({color}) => <Text style={{color}}>🎬</Text>,
+        }}
+      />
+      <Tab.Screen
+        name="Notes"
+        component={NotesScreen}
+        options={{
+          tabBarLabel: 'Notas',
+          tabBarIcon: ({color}) => <Text style={{color}}>📝</Text>,
         }}
       />
     </Tab.Navigator>

@@ -1,5 +1,5 @@
 import { apiClient } from '../utils/api';
-import { ApiResponse } from '../types';
+import { ApiResponse, UserProfile } from '../types';
 
 interface PhotoResponse {
   photoUrl: string;
@@ -7,6 +7,9 @@ interface PhotoResponse {
 }
 
 export const userService = {
+  async getUserById(userId: string): Promise<ApiResponse<UserProfile>> {
+    return await apiClient.get<UserProfile>(`/users/${userId}`);
+  },
   async getMyPhoto(): Promise<ApiResponse<PhotoResponse>> {
     return await apiClient.get<PhotoResponse>('/users/me/photo');
   },

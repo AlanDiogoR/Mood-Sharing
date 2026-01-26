@@ -211,13 +211,15 @@ class NotificationService {
 
     try {
       const trimmedMessage = moodMessage?.trim();
-      const bodyText = trimmedMessage
-        ? `${partnerName}: ${trimmedMessage}`
-        : `${partnerName} atualizou o humor`;
+      const safePartnerName = partnerName?.trim();
+      const titleText = safePartnerName
+        ? `${safePartnerName} atualizou o humor`
+        : 'Mood Sharing';
+      const bodyText = trimmedMessage || (moodType ? `Humor: ${moodType}` : 'Atualizou o humor');
 
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: 'Mood Sharing',
+          title: titleText,
           body: bodyText,
           sound: true,
           priority: (Notifications as any).AndroidNotificationPriority?.HIGH || 1,

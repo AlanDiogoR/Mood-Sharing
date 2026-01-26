@@ -1,5 +1,5 @@
 import React, {createContext, useContext, useState, useEffect, ReactNode, useRef} from 'react';
-import {Mood, MoodType, Location} from '../types';
+import {Mood, MoodType, Location, UserProfile} from '../types';
 import {moodService} from '../services/moodService';
 import {locationService} from '../services/locationService';
 import {notificationService} from '../services/notificationService';
@@ -8,6 +8,7 @@ import {getAbsoluteUrl} from '../utils/url';
 import {CONFIG} from '../constants/config';
 import {useAuth} from './authContext';
 import {widgetService} from '../services/widgetService';
+import {userService} from '../services/userService';
 
 interface MoodContextType {
   currentMood: Mood | null;
@@ -37,11 +38,13 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
   const {user} = useAuth();
   const [currentMood, setCurrentMood] = useState<Mood | null>(null);
   const [partnerMood, setPartnerMood] = useState<Mood | null>(null);
+  const [partnerUser, setPartnerUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isNearby, setIsNearby] = useState(false);
   const [distance, setDistance] = useState<number | null>(null);
   const currentMoodRef = useRef<Mood | null>(null);
   const partnerMoodRef = useRef<Mood | null>(null);
+  const partnerUserRef = useRef<UserProfile | null>(null);
   const userRef = useRef<typeof user | null>(null);
   const lastLockscreenKeyRef = useRef<string | null>(null);
   const lastWidgetKeyRef = useRef<string | null>(null);
@@ -54,6 +57,10 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
   useEffect(() => {
     partnerMoodRef.current = partnerMood;
   }, [partnerMood]);
+
+  useEffect(() => {
+    partnerUserRef.current = partnerUser;
+  }, [partnerUser]);
 
   useEffect(() => {
     userRef.current = user;
@@ -145,7 +152,8 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
       if (response.success && response.data) {
         setCurrentMood(response.data);
         await refreshMoods();
-        await notificationService.sendProximityNotification(user?.partnerId || 'Parceiro');
+        const partnerName = partnerUserRef.current?.name || 'Parceiro';
+        await notificationService.sendProximityNotification(partnerName);
       }
     } catch (error) {
       console.error('Error updating mood with proximity:', error);
@@ -184,10 +192,25 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
         }
       }
 
+      let resolvedPartnerUser = partnerUserRef.current;
+      if (user.partnerId) {
+        if (!resolvedPartnerUser || resolvedPartnerUser.id !== user.partnerId) {
+          const partnerUserResponse = await userService.getUserById(user.partnerId);
+          if (partnerUserResponse.success && partnerUserResponse.data) {
+            resolvedPartnerUser = partnerUserResponse.data;
+            setPartnerUser(partnerUserResponse.data);
+          }
+        }
+      } else if (partnerUserRef.current) {
+        setPartnerUser(null);
+      }
+
+      const partnerName = resolvedPartnerUser?.name || 'Parceiro';
+      const partnerPhotoUrl = getAbsoluteUrl(resolvedPartnerUser?.photoUrl);
+
       // Atualiza notificação da tela bloqueada quando os humores mudam
       if (currentResponse.success && currentResponse.data) {
-        const partnerName = 'Parceiro';
-        const absolutePhotoUrl = getAbsoluteUrl(user?.photoUrl);
+        const absolutePhotoUrl = null;
         const partnerData = partnerResponse.success ? partnerResponse.data : undefined;
         const lockscreenKey = JSON.stringify({
           photoUrl: absolutePhotoUrl,
@@ -195,6 +218,7 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
           moodMessage: currentResponse.data.message || '',
           partnerType: partnerData?.type || '',
           partnerMessage: partnerData?.message || '',
+          partnerName,
         });
 
         if (lastLockscreenKeyRef.current !== lockscreenKey) {
@@ -213,11 +237,13 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
           const widgetKey = JSON.stringify({
             partnerType: partnerData.type,
             partnerMessage: partnerData.message || '',
+            partnerName,
+            partnerPhotoUrl: partnerPhotoUrl || '',
           });
 
           if (lastWidgetKeyRef.current !== widgetKey) {
             lastWidgetKeyRef.current = widgetKey;
-            widgetService.updatePartnerMoodWidget(partnerName, partnerData.message || '');
+            widgetService.updatePartnerMoodWidget(partnerName, partnerData.message || '', partnerPhotoUrl);
           }
         }
       }

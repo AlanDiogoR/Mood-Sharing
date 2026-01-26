@@ -3,7 +3,7 @@ import { NativeModules, Platform } from 'react-native';
 const { MoodWidgetModule } = NativeModules;
 
 export const widgetService = {
-  updatePartnerMoodWidget: (partnerName: string, message: string) => {
+  updatePartnerMoodWidget: (partnerName: string, message: string, partnerPhotoUrl?: string | null) => {
     if (Platform.OS !== 'android') {
       return;
     }
@@ -12,6 +12,7 @@ export const widgetService = {
     }
     const safeName = partnerName?.trim() || 'Parceiro';
     const safeMessage = message?.trim() || 'Atualizou o humor';
-    MoodWidgetModule.updateMoodWidget(safeName, safeMessage);
+    const safePhotoUrl = partnerPhotoUrl?.trim() || null;
+    MoodWidgetModule.updateMoodWidget(safeName, safeMessage, safePhotoUrl);
   },
 };

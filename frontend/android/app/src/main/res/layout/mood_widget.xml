@@ -3,26 +3,60 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="12dp"
-    android:background="@android:color/black">
+    android:padding="14dp"
+    android:background="@drawable/widget_background">
 
     <TextView
-        android:id="@+id/widget_partner_name"
+        android:id="@+id/widget_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Parceiro"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="@android:color/white" />
+        android:text="Mood Sharing"
+        android:textSize="12sp"
+        android:textColor="#9AA0A6"
+        android:letterSpacing="0.05"
+        android:layout_marginBottom="8dp" />
 
-    <TextView
-        android:id="@+id/widget_partner_message"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:text="Atualizou o humor"
-        android:textSize="14sp"
-        android:textColor="@android:color/white" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/widget_partner_photo"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_marginEnd="12dp"
+            android:scaleType="centerCrop"
+            android:background="@drawable/widget_avatar_bg"
+            android:clipToOutline="true"
+            android:src="@drawable/widget_avatar_placeholder" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/widget_partner_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Parceiro"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/white" />
+
+            <TextView
+                android:id="@+id/widget_partner_message"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Atualizou o humor"
+                android:textSize="14sp"
+                android:textColor="@android:color/white" />
+        </LinearLayout>
+    </LinearLayout>
 
     <TextView
         android:id="@+id/widget_updated_at"
@@ -30,6 +64,6 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:text="Atualizado: --:--"
-        android:textSize="12sp"
-        android:textColor="@android:color/darker_gray" />
+        android:textSize="11sp"
+        android:textColor="#9AA0A6" />
 </LinearLayout>

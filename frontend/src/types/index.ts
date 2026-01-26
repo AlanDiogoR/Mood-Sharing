@@ -9,6 +9,13 @@ export interface User {
   updatedAt: string;
 }
 
+export interface UserProfile {
+  id: string;
+  name: string;
+  photoUrl?: string | null;
+  photoUploadedAt?: string | null;
+}
+
 export interface Mood {
   id: string;
   userId: string;
@@ -81,6 +88,15 @@ export interface MediaItem {
   type: MediaType;
   notes?: string | null;
   orderIndex?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SharedNote {
+  id: string;
+  pairKey: string;
+  authorId: string;
+  content: string;
   createdAt: string;
   updatedAt: string;
 }

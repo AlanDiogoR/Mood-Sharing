@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes';
 import moodRoutes from './routes/moodRoutes';
 import userRoutes from './routes/userRoutes';
 import mediaRoutes from './routes/mediaRoutes';
+import notesRoutes from './routes/notesRoutes';
 import { uploadDir, isServerless } from './config/uploads';
 import { getPublicUserPhoto } from './controllers/userController';
 
@@ -62,6 +63,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/moods', moodRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/notes', notesRoutes);
 
 // 404 handler
 app.use((req, res) => {

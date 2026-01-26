@@ -19,11 +19,6 @@ class LocationService {
         throw new Error('Permissão de localização negada');
       }
 
-      const backgroundStatus = await Location.requestBackgroundPermissionsAsync();
-      if (backgroundStatus.status !== 'granted') {
-        console.warn('Permissão de localização em background negada');
-      }
-
       this.isInitialized = true;
     } catch (error) {
       console.error('Error initializing location service:', error);
@@ -109,9 +104,7 @@ class LocationService {
       if (status !== 'granted') {
         return false;
       }
-
-      const backgroundStatus = await Location.requestBackgroundPermissionsAsync();
-      return backgroundStatus.status === 'granted';
+      return true;
     } catch (error) {
       console.error('Error requesting location permissions:', error);
       return false;
@@ -121,11 +114,7 @@ class LocationService {
   async checkPermissions(): Promise<boolean> {
     try {
       const foregroundStatus = await Location.getForegroundPermissionsAsync();
-      const backgroundStatus = await Location.getBackgroundPermissionsAsync();
-      return (
-        foregroundStatus.status === 'granted' &&
-        backgroundStatus.status === 'granted'
-      );
+      return foregroundStatus.status === 'granted';
     } catch (error) {
       console.error('Error checking location permissions:', error);
       return false;
