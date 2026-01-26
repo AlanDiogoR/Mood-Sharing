@@ -7,6 +7,8 @@ import {LoginScreen} from '../screens/LoginScreen';
 import {HomeScreen} from '../screens/HomeScreen';
 import {MediaScreen} from '../screens/MediaScreen';
 import {NotesScreen} from '../screens/NotesScreen';
+import {MediaFormScreen} from '../screens/MediaFormScreen';
+import {SpecialAreaScreen} from '../screens/SpecialAreaScreen';
 import {COLORS} from '../constants/colors';
 
 const Stack = createStackNavigator();
@@ -98,11 +100,23 @@ const AppNavigator: React.FC = () => {
           options={{headerShown: false}}
         />
       ) : (
-        <Stack.Screen
-          name="MainTabs"
-          component={MainTabs}
-          options={{headerShown: false}}
-        />
+        <>
+          <Stack.Screen
+            name="MainTabs"
+            component={MainTabs}
+            options={{headerShown: false}}
+          />
+          <Stack.Screen
+            name="MediaForm"
+            component={MediaFormScreen}
+            options={{title: 'Filmes e séries'}}
+          />
+          <Stack.Screen
+            name="SpecialArea"
+            component={SpecialAreaScreen}
+            options={{title: 'Area especial'}}
+          />
+        </>
       )}
     </Stack.Navigator>
   );

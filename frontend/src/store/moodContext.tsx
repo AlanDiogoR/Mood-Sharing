@@ -49,6 +49,8 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
   const lastLockscreenKeyRef = useRef<string | null>(null);
   const lastWidgetKeyRef = useRef<string | null>(null);
   const lastProximityStateRef = useRef<boolean>(false);
+  const lastPartnerFetchRef = useRef<number>(0);
+  const PARTNER_FETCH_INTERVAL_MS = 60 * 1000;
 
   useEffect(() => {
     currentMoodRef.current = currentMood;
@@ -194,11 +196,16 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
 
       let resolvedPartnerUser = partnerUserRef.current;
       if (user.partnerId) {
-        if (!resolvedPartnerUser || resolvedPartnerUser.id !== user.partnerId) {
+        const shouldRefreshPartner =
+          !resolvedPartnerUser ||
+          resolvedPartnerUser.id !== user.partnerId ||
+          Date.now() - lastPartnerFetchRef.current > PARTNER_FETCH_INTERVAL_MS;
+        if (shouldRefreshPartner) {
           const partnerUserResponse = await userService.getUserById(user.partnerId);
           if (partnerUserResponse.success && partnerUserResponse.data) {
             resolvedPartnerUser = partnerUserResponse.data;
             setPartnerUser(partnerUserResponse.data);
+            lastPartnerFetchRef.current = Date.now();
           }
         }
       } else if (partnerUserRef.current) {

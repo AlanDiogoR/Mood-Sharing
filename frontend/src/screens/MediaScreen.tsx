@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -14,20 +13,14 @@ import { COLORS } from '../constants/colors';
 import { MediaItem, MediaType } from '../types';
 import { mediaService } from '../services/mediaService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-type Mode = 'create' | 'edit';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 export const MediaScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [title, setTitle] = useState('');
-  const [notes, setNotes] = useState('');
-  const [type, setType] = useState<MediaType>('movie');
-  const [mode, setMode] = useState<Mode>('create');
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<MediaType | 'all'>('all');
-  const [showForm, setShowForm] = useState(false);
 
   const sortedItems = useMemo(() => {
     const hasManualOrder = items.some(item => item.orderIndex !== null && item.orderIndex !== undefined);
@@ -60,63 +53,18 @@ export const MediaScreen: React.FC = () => {
     loadItems();
   }, [loadItems]);
 
-  const resetForm = () => {
-    setTitle('');
-    setNotes('');
-    setType('movie');
-    setMode('create');
-    setEditingId(null);
-    setShowForm(false);
-  };
+  useFocusEffect(
+    useCallback(() => {
+      loadItems();
+    }, [loadItems])
+  );
 
   const handleStartCreate = () => {
-    resetForm();
-    setShowForm(true);
-  };
-
-  const handleSubmit = async () => {
-    if (!title.trim()) {
-      Alert.alert('Atenção', 'Informe o título');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      if (mode === 'create') {
-        const response = await mediaService.create({ title: title.trim(), type, notes: notes.trim() || undefined });
-        if (response.success && response.data) {
-          setItems(prev => [...prev, response.data!]);
-          resetForm();
-        } else {
-          Alert.alert('Erro', response.error || 'Não foi possível adicionar item');
-        }
-      } else if (editingId) {
-        const response = await mediaService.update(editingId, {
-          title: title.trim(),
-          type,
-          notes: notes.trim() || undefined,
-        });
-        if (response.success && response.data) {
-          setItems(prev => prev.map(item => (item.id === editingId ? response.data! : item)));
-          resetForm();
-        } else {
-          Alert.alert('Erro', response.error || 'Não foi possível atualizar item');
-        }
-      }
-    } catch (error) {
-      Alert.alert('Erro', 'Falha ao salvar item');
-    } finally {
-      setLoading(false);
-    }
+    navigation.navigate('MediaForm' as never, { mode: 'create' } as never);
   };
 
   const handleEdit = (item: MediaItem) => {
-    setMode('edit');
-    setEditingId(item.id);
-    setTitle(item.title);
-    setNotes(item.notes || '');
-    setType(item.type);
-    setShowForm(true);
+    navigation.navigate('MediaForm' as never, { mode: 'edit', item } as never);
   };
 
   const handleDelete = (item: MediaItem) => {
@@ -199,53 +147,6 @@ export const MediaScreen: React.FC = () => {
         ))}
       </View>
 
-      {showForm && (
-        <View style={styles.form}>
-          <View style={styles.typeRow}>
-            <TouchableOpacity
-              style={[styles.typeChip, type === 'movie' && styles.typeChipActive]}
-              onPress={() => setType('movie')}>
-              <Text style={[styles.typeChipText, type === 'movie' && styles.typeChipTextActive]}>
-                Filme
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.typeChip, type === 'series' && styles.typeChipActive]}
-              onPress={() => setType('series')}>
-              <Text style={[styles.typeChipText, type === 'series' && styles.typeChipTextActive]}>
-                Série
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <TextInput
-            style={styles.input}
-            placeholder="Título"
-            placeholderTextColor={COLORS.textMuted}
-            value={title}
-            onChangeText={setTitle}
-          />
-          <TextInput
-            style={[styles.input, styles.notesInput]}
-            placeholder="Notas (opcional)"
-            placeholderTextColor={COLORS.textMuted}
-            value={notes}
-            onChangeText={setNotes}
-            multiline
-          />
-
-          <View style={styles.formActions}>
-            <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit} disabled={loading}>
-              <Text style={styles.primaryButtonText}>{mode === 'create' ? 'Adicionar' : 'Salvar'}</Text>
-            </TouchableOpacity>
-            {mode === 'edit' && (
-              <TouchableOpacity style={styles.secondaryButton} onPress={resetForm}>
-                <Text style={styles.secondaryButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      )}
     </View>
   );
 
@@ -291,75 +192,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: COLORS.text,
     fontWeight: '700',
-  },
-  form: {
-    backgroundColor: COLORS.backgroundCard,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  typeRow: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  typeChip: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginRight: 8,
-    alignItems: 'center',
-  },
-  typeChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  typeChipText: {
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-  },
-  typeChipTextActive: {
-    color: COLORS.background,
-  },
-  input: {
-    backgroundColor: COLORS.background,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: COLORS.text,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 12,
-  },
-  notesInput: {
-    minHeight: 60,
-    textAlignVertical: 'top',
-  },
-  formActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  primaryButton: {
-    flex: 1,
-    backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: COLORS.background,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginLeft: 12,
-  },
-  secondaryButtonText: {
-    color: COLORS.textSecondary,
-    fontWeight: '600',
   },
   filterRow: {
     flexDirection: 'row',

@@ -22,11 +22,13 @@ import {userService} from '../services/userService';
 import {getAbsoluteUrl} from '../utils/url';
 import {storage} from '../utils/storage';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useNavigation} from '@react-navigation/native';
 
 export const HomeScreen: React.FC = () => {
   const {user, logout, refreshUser} = useAuth();
   const {currentMood, partnerMood, updateMood, refreshMoods, isLoading, isNearby, distance} =
     useMood();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [selectedMood, setSelectedMood] = useState<MoodType | undefined>(currentMood?.type);
   const [message, setMessage] = useState('');
@@ -95,7 +97,6 @@ export const HomeScreen: React.FC = () => {
   useEffect(() => {
     if (currentMood) {
       setSelectedMood(currentMood.type);
-      setMessage(currentMood.message || '');
     }
   }, [currentMood]);
 
@@ -168,7 +169,15 @@ export const HomeScreen: React.FC = () => {
       refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refreshMoods} />}>
       <View style={[styles.header, {paddingTop: 20 + insets.top}]}>
         <View style={styles.headerLeft}>
-          <Avatar uri={localPhotoUri || getAbsoluteUrl(user?.photoUrl)} size={56} />
+          <TouchableOpacity
+            onPress={() => {
+              if (user?.email === 'alandiogor@gmail.com') {
+                navigation.navigate('SpecialArea' as never);
+              }
+            }}
+            activeOpacity={user?.email === 'alandiogor@gmail.com' ? 0.7 : 1}>
+            <Avatar uri={localPhotoUri || getAbsoluteUrl(user?.photoUrl)} size={56} />
+          </TouchableOpacity>
           <View style={styles.headerText}>
             <Text style={styles.greeting}>Olá, {user?.name}!</Text>
             <TouchableOpacity onPress={handlePhotoUpload} disabled={isUploadingPhoto}>
