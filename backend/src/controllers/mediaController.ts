@@ -38,6 +38,12 @@ export const validateUpdateMedia = [
   body('title').optional().trim().isLength({ min: 1 }).withMessage('Título inválido'),
   body('type').optional().isIn(['movie', 'series']).withMessage('Tipo inválido'),
   body('notes').optional().isString().withMessage('Notas inválidas'),
+  body('rating')
+    .optional({ nullable: true })
+    .isFloat({ min: 0, max: 5 })
+    .withMessage('Avaliação inválida'),
+  body('review').optional({ nullable: true }).isString().withMessage('Comentário inválido'),
+  body('completed').optional().isBoolean().withMessage('Status inválido'),
 ];
 
 export const validateGetOrDeleteMedia = [param('id').isMongoId().withMessage('ID inválido')];

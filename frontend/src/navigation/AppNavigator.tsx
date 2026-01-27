@@ -7,6 +7,7 @@ import {useTheme} from '../store/themeContext';
 import {LoginScreen} from '../screens/LoginScreen';
 import {HomeScreen} from '../screens/HomeScreen';
 import {MediaScreen} from '../screens/MediaScreen';
+import {CompletedMediaScreen} from '../screens/CompletedMediaScreen';
 import {NotesScreen} from '../screens/NotesScreen';
 import {MediaFormScreen} from '../screens/MediaFormScreen';
 import {SpecialAreaScreen} from '../screens/SpecialAreaScreen';
@@ -61,6 +62,16 @@ const MainTabs: React.FC = () => {
         options={{
           tabBarLabel: 'Filmes/Séries',
           tabBarIcon: ({color, size}) => <Ionicons name="film" size={size ?? 20} color={color} />,
+        }}
+      />
+      <Tab.Screen
+        name="CompletedMedia"
+        component={CompletedMediaScreen}
+        options={{
+          tabBarLabel: 'Concluídos',
+          tabBarIcon: ({color, size}) => (
+            <Ionicons name="checkmark-circle" size={size ?? 20} color={color} />
+          ),
         }}
       />
       <Tab.Screen

@@ -95,6 +95,9 @@ export interface MediaItem {
   title: string;
   type: MediaType;
   notes?: string | null;
+  rating?: number | null;
+  review?: string | null;
+  completed?: boolean;
   orderIndex?: number | null;
   createdAt: string;
   updatedAt: string;

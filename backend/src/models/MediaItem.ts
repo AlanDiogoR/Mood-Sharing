@@ -8,6 +8,9 @@ export interface IMediaItem extends Document {
   title: string;
   type: MediaType;
   notes?: string;
+  rating?: number | null;
+  review?: string | null;
+  completed?: boolean;
   orderIndex?: number | null;
   createdAt: Date;
   updatedAt: Date;
@@ -41,6 +44,22 @@ const MediaItemSchema = new Schema<IMediaItem>(
       type: String,
       default: null,
       trim: true,
+    },
+    rating: {
+      type: Number,
+      min: 0,
+      max: 5,
+      default: null,
+    },
+    review: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    completed: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
     orderIndex: {
       type: Number,

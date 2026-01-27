@@ -7,6 +7,12 @@ export interface MediaPayload {
   notes?: string;
 }
 
+export interface MediaUpdatePayload extends Partial<MediaPayload> {
+  rating?: number | null;
+  review?: string | null;
+  completed?: boolean;
+}
+
 export const mediaService = {
   async list(): Promise<ApiResponse<MediaItem[]>> {
     return await apiClient.get<MediaItem[]>('/media');
@@ -16,7 +22,7 @@ export const mediaService = {
     return await apiClient.post<MediaItem>('/media', payload);
   },
 
-  async update(id: string, payload: Partial<MediaPayload>): Promise<ApiResponse<MediaItem>> {
+  async update(id: string, payload: MediaUpdatePayload): Promise<ApiResponse<MediaItem>> {
     return await apiClient.put<MediaItem>(`/media/${id}`, payload);
   },
 

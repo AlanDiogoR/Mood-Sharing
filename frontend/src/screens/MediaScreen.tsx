@@ -7,6 +7,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  TextInput,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { COLORS } from '../constants/colors';
@@ -15,6 +17,7 @@ import { mediaService } from '../services/mediaService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTheme } from '../store/themeContext';
+import { Ionicons } from '@expo/vector-icons';
 
 export const MediaScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -23,10 +26,16 @@ export const MediaScreen: React.FC = () => {
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<MediaType | 'all'>('all');
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
+  const [ratingValue, setRatingValue] = useState(0);
+  const [reviewText, setReviewText] = useState('');
+  const [savingReview, setSavingReview] = useState(false);
 
   const sortedItems = useMemo(() => {
+    const pendingItems = items.filter(item => !item.completed);
     const hasManualOrder = items.some(item => item.orderIndex !== null && item.orderIndex !== undefined);
-    const data = [...items];
+    const data = [...pendingItems];
     if (hasManualOrder) {
       data.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
     } else {
@@ -69,6 +78,47 @@ export const MediaScreen: React.FC = () => {
     navigation.navigate('MediaForm' as never, { mode: 'edit', item } as never);
   };
 
+  const handleOpenReview = (item: MediaItem) => {
+    setSelectedItem(item);
+    setRatingValue(typeof item.rating === 'number' ? item.rating : 0);
+    setReviewText(item.review ?? '');
+    setRatingModalVisible(true);
+  };
+
+  const handleCloseReview = () => {
+    if (savingReview) {
+      return;
+    }
+    setRatingModalVisible(false);
+  };
+
+  const handleSaveReview = async () => {
+    if (!selectedItem) {
+      return;
+    }
+    setSavingReview(true);
+    try {
+      const response = await mediaService.update(selectedItem.id, {
+        rating: ratingValue,
+        review: reviewText.trim() ? reviewText.trim() : null,
+        completed: true,
+      });
+      if (response.success) {
+        setRatingModalVisible(false);
+        setSelectedItem(null);
+        setRatingValue(0);
+        setReviewText('');
+        await loadItems();
+      } else {
+        Alert.alert('Erro', response.error || 'Não foi possível salvar a avaliação');
+      }
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao salvar avaliação');
+    } finally {
+      setSavingReview(false);
+    }
+  };
+
   const handleDelete = (item: MediaItem) => {
     Alert.alert('Remover', `Deseja remover "${item.title}"?`, [
       { text: 'Cancelar', style: 'cancel' },
@@ -107,6 +157,7 @@ export const MediaScreen: React.FC = () => {
   const renderItem = ({ item, drag, isActive }: RenderItemParams<MediaItem>) => (
     <TouchableOpacity
       onLongPress={drag}
+      onPress={() => handleOpenReview(item)}
       disabled={isActive}
       style={[styles.card, isActive && styles.cardActive]}>
       <View style={styles.cardInfo}>
@@ -121,6 +172,11 @@ export const MediaScreen: React.FC = () => {
         )}
       </View>
       <View style={styles.cardActions}>
+        <TouchableOpacity onPress={() => handleOpenReview(item)} style={styles.actionButton}>
+          <Text style={[styles.actionText, { color: colors.primary }, isActive && styles.actionTextActive]}>
+            Avaliar
+          </Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => handleEdit(item)} style={styles.actionButton}>
           <Text style={[styles.actionText, { color: colors.primary }, isActive && styles.actionTextActive]}>
             Editar
@@ -179,6 +235,55 @@ export const MediaScreen: React.FC = () => {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Modal transparent visible={ratingModalVisible} animationType="fade" onRequestClose={handleCloseReview}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Avaliar</Text>
+            {!!selectedItem && <Text style={styles.modalSubtitle}>{selectedItem.title}</Text>}
+            <View style={styles.ratingRow}>
+              <TouchableOpacity
+                style={[
+                  styles.ratingReset,
+                  ratingValue === 0 && { backgroundColor: colors.primary, borderColor: colors.primary },
+                ]}
+                onPress={() => setRatingValue(0)}>
+                <Text style={[styles.ratingResetText, ratingValue === 0 && styles.ratingResetTextActive]}>0</Text>
+              </TouchableOpacity>
+              {Array.from({ length: 5 }).map((_, index) => {
+                const value = index + 1;
+                return (
+                  <TouchableOpacity key={value} style={styles.starButton} onPress={() => setRatingValue(value)}>
+                    <Ionicons
+                      name={ratingValue >= value ? 'star' : 'star-outline'}
+                      size={24}
+                      color={ratingValue >= value ? colors.primary : COLORS.textMuted}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <TextInput
+              style={styles.reviewInput}
+              placeholder="Comentário (opcional)"
+              placeholderTextColor={COLORS.textMuted}
+              value={reviewText}
+              onChangeText={setReviewText}
+              multiline
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalPrimaryButton, { backgroundColor: colors.primary }]}
+                onPress={handleSaveReview}
+                disabled={savingReview}>
+                <Text style={styles.modalPrimaryText}>Salvar avaliação</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalButton, styles.modalSecondaryButton]} onPress={handleCloseReview}>
+                <Text style={styles.modalSecondaryText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <DraggableFlatList
         data={sortedItems}
         keyExtractor={item => item.id}
@@ -307,5 +412,83 @@ const styles = StyleSheet.create({
   },
   deleteText: {
     color: COLORS.error,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  modalSubtitle: {
+    marginTop: 6,
+    color: COLORS.textSecondary,
+    fontSize: 13,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  starButton: {
+    paddingHorizontal: 4,
+  },
+  ratingReset: {
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  ratingResetText: {
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  ratingResetTextActive: {
+    color: '#FFFFFF',
+  },
+  reviewInput: {
+    marginTop: 16,
+    minHeight: 80,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: COLORS.text,
+    textAlignVertical: 'top',
+  },
+  modalActions: {
+    marginTop: 16,
+  },
+  modalButton: {
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalPrimaryButton: {
+    marginBottom: 10,
+  },
+  modalSecondaryButton: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  modalPrimaryText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  modalSecondaryText: {
+    color: COLORS.textSecondary,
+    fontWeight: '600',
   },
 });
