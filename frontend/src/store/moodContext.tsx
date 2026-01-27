@@ -212,8 +212,16 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
         setPartnerUser(null);
       }
 
-      const partnerName = resolvedPartnerUser?.name || 'Parceiro';
-      const partnerPhotoUrl = getAbsoluteUrl(resolvedPartnerUser?.photoUrl);
+      const partnerName =
+        user?.partnerName?.trim() || resolvedPartnerUser?.name || 'Parceiro';
+      const rawPartnerPhotoUrl = getAbsoluteUrl(resolvedPartnerUser?.photoUrl);
+      const partnerPhotoUpdatedAt = resolvedPartnerUser?.photoUploadedAt;
+      const partnerPhotoUrl =
+        rawPartnerPhotoUrl && partnerPhotoUpdatedAt
+          ? `${rawPartnerPhotoUrl}${rawPartnerPhotoUrl.includes('?') ? '&' : '?'}t=${encodeURIComponent(
+              partnerPhotoUpdatedAt
+            )}`
+          : rawPartnerPhotoUrl;
       const partnerData = partnerResponse.success ? partnerResponse.data : undefined;
 
       // Atualiza notificação da tela bloqueada quando os humores mudam
@@ -246,6 +254,7 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
             partnerMessage: partnerData?.message || '',
             partnerName,
             partnerPhotoUrl: partnerPhotoUrl || '',
+            partnerPhotoUpdatedAt: partnerPhotoUpdatedAt || '',
             partnerDistanceKm: distance ?? null,
           });
 

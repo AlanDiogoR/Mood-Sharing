@@ -323,6 +323,43 @@ export const updateFcmToken = async (req: Request, res: Response): Promise<void>
   }
 };
 
+export const changePassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ success: false, error: 'Dados inválidos', errors: errors.array() });
+      return;
+    }
+
+    const userId = (req as any).user?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, error: 'Usuário não autenticado' });
+      return;
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+      return;
+    }
+
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      res.status(400).json({ success: false, error: 'Senha atual incorreta' });
+      return;
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.json({ success: true, message: 'Senha atualizada com sucesso' });
+  } catch (error: any) {
+    console.error('Erro ao atualizar senha:', error);
+    res.status(500).json({ success: false, error: 'Erro ao atualizar senha' });
+  }
+};
+
 // Validações
 export const validateRegister = [
   body('email').isEmail().withMessage('Email inválido'),
@@ -333,4 +370,9 @@ export const validateRegister = [
 export const validateLogin = [
   body('email').isEmail().withMessage('Email inválido'),
   body('password').notEmpty().withMessage('Senha é obrigatória'),
+];
+
+export const validateChangePassword = [
+  body('currentPassword').notEmpty().withMessage('Senha atual é obrigatória'),
+  body('newPassword').isLength({ min: 6 }).withMessage('Nova senha deve ter pelo menos 6 caracteres'),
 ];

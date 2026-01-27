@@ -14,6 +14,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { COLORS } from '../constants/colors';
 import { MediaItem, MediaType } from '../types';
 import { mediaService } from '../services/mediaService';
+import { useTheme } from '../store/themeContext';
 
 type Mode = 'create' | 'edit';
 
@@ -27,6 +28,7 @@ type MediaFormRoute = {
 export const MediaFormScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<MediaFormRoute>();
+  const { colors } = useTheme();
   const mode = route.params?.mode ?? 'create';
   const editingItem = route.params?.item;
   const [title, setTitle] = useState(editingItem?.title ?? '');
@@ -89,14 +91,22 @@ export const MediaFormScreen: React.FC = () => {
         <View style={styles.form}>
           <View style={styles.typeRow}>
             <TouchableOpacity
-              style={[styles.typeChip, type === 'movie' && styles.typeChipActive]}
+              style={[
+                styles.typeChip,
+                type === 'movie' && styles.typeChipActive,
+                type === 'movie' && { backgroundColor: colors.primary, borderColor: colors.primary },
+              ]}
               onPress={() => setType('movie')}>
               <Text style={[styles.typeChipText, type === 'movie' && styles.typeChipTextActive]}>
                 Filme
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.typeChip, type === 'series' && styles.typeChipActive]}
+              style={[
+                styles.typeChip,
+                type === 'series' && styles.typeChipActive,
+                type === 'series' && { backgroundColor: colors.primary, borderColor: colors.primary },
+              ]}
               onPress={() => setType('series')}>
               <Text style={[styles.typeChipText, type === 'series' && styles.typeChipTextActive]}>
                 Série
@@ -121,7 +131,10 @@ export const MediaFormScreen: React.FC = () => {
           />
 
           <View style={styles.formActions}>
-            <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit} disabled={loading}>
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+              onPress={handleSubmit}
+              disabled={loading}>
               <Text style={styles.primaryButtonText}>
                 {mode === 'edit' ? 'Salvar' : 'Adicionar'}
               </Text>

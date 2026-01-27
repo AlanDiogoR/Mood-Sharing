@@ -5,11 +5,13 @@ import { COLORS } from '../constants/colors';
 import { SpecialHomeScreen } from './SpecialHomeScreen';
 import { WorkoutScreen } from './WorkoutScreen';
 import { DietScreen } from './DietScreen';
+import { useTheme } from '../store/themeContext';
 
 type TabKey = 'home' | 'workout' | 'diet';
 
 export const SpecialAreaScreen: React.FC = () => {
   const navigation = useNavigation();
+  const { colors } = useTheme();
   const [activeTab, setActiveTab] = useState<TabKey>('home');
 
   const content = useMemo(() => {
@@ -33,14 +35,26 @@ export const SpecialAreaScreen: React.FC = () => {
         <TouchableOpacity
           style={[styles.tabItem, activeTab === 'workout' && styles.tabItemActive]}
           onPress={() => setActiveTab('workout')}>
-          <Text style={[styles.tabLabel, activeTab === 'workout' && styles.tabLabelActive]}>
+          <Text
+            style={[
+              styles.tabLabel,
+              activeTab === 'workout' && styles.tabLabelActive,
+              activeTab === 'workout' && { color: colors.primary },
+            ]}>
             Treino
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tabItem, activeTab === 'diet' && styles.tabItemActive]}
           onPress={() => setActiveTab('diet')}>
-          <Text style={[styles.tabLabel, activeTab === 'diet' && styles.tabLabelActive]}>Dieta</Text>
+          <Text
+            style={[
+              styles.tabLabel,
+              activeTab === 'diet' && styles.tabLabelActive,
+              activeTab === 'diet' && { color: colors.primary },
+            ]}>
+            Dieta
+          </Text>
         </TouchableOpacity>
       </View>
     </View>

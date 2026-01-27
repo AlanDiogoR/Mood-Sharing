@@ -2,9 +2,12 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  partnerName?: string | null;
   partnerId?: string;
   photoUrl?: string | null;
   photoUploadedAt?: string | null;
+  themePrimary?: string | null;
+  themeSecondary?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -12,8 +15,11 @@ export interface User {
 export interface UserProfile {
   id: string;
   name: string;
+  partnerName?: string | null;
   photoUrl?: string | null;
   photoUploadedAt?: string | null;
+  themePrimary?: string | null;
+  themeSecondary?: string | null;
 }
 
 export interface Mood {
@@ -85,6 +91,7 @@ export type MediaType = 'movie' | 'series';
 export interface MediaItem {
   id: string;
   userId: string;
+  pairKey?: string;
   title: string;
   type: MediaType;
   notes?: string | null;
@@ -100,4 +107,23 @@ export interface SharedNote {
   content: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface WorkoutSummaryEntry {
+  id?: string;
+  dateKey: string;
+  durationMinutes: number;
+  calories: number;
+  completedAt: number | string;
+}
+
+export interface WeeklyWorkoutSummary {
+  startKey: string;
+  endKey: string;
+  entries: WorkoutSummaryEntry[];
+  totals: {
+    totalMinutes: number;
+    totalCalories: number;
+    totalDays: number;
+  };
 }

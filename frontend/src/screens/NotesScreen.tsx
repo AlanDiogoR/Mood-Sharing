@@ -14,11 +14,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/colors';
 import { SharedNote } from '../types';
 import { notesService } from '../services/notesService';
+import { useTheme } from '../store/themeContext';
 
 type Mode = 'create' | 'edit';
 
 export const NotesScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const [items, setItems] = useState<SharedNote[]>([]);
   const [loading, setLoading] = useState(false);
   const [content, setContent] = useState('');
@@ -153,7 +155,10 @@ export const NotesScreen: React.FC = () => {
               />
 
               <View style={styles.formActions}>
-                <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit} disabled={loading}>
+                <TouchableOpacity
+                  style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+                  onPress={handleSubmit}
+                  disabled={loading}>
                   <Text style={styles.primaryButtonText}>{mode === 'create' ? 'Adicionar' : 'Salvar'}</Text>
                 </TouchableOpacity>
                 {mode === 'edit' && (

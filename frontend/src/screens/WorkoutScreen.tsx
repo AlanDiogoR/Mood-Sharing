@@ -3,6 +3,8 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { COLORS } from '../constants/colors';
 import { getWorkoutPlan, WorkoutExercise } from '../data/workouts';
 import { storage } from '../utils/storage';
+import { useTheme } from '../store/themeContext';
+import { workoutService } from '../services/workoutService';
 
 interface WorkoutScreenProps {
   onBackToResumo: () => void;
@@ -25,6 +27,7 @@ const getWeekdayKey = (date = new Date()): string => {
 };
 
 export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onBackToResumo }) => {
+  const { colors } = useTheme();
   const [summaryText, setSummaryText] = useState<string | null>(null);
   const [sessionStart, setSessionStart] = useState<number | null>(null);
   const dateKey = useMemo(() => getDateKey(), []);
@@ -66,6 +69,11 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onBackToResumo }) 
       completedAt: Date.now(),
     };
     await storage.setWorkoutSummary(dateKey, summary);
+    try {
+      await workoutService.saveSummary(summary);
+    } catch (error) {
+      console.error('Erro ao salvar treino no servidor:', error);
+    }
     await storage.clearWorkoutSession(dateKey);
     await storage.addWorkoutDay(new Date().getFullYear(), dateKey);
     setSessionStart(null);
@@ -102,11 +110,11 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onBackToResumo }) 
       ))}
 
       {!sessionStart ? (
-        <TouchableOpacity style={styles.primaryButton} onPress={handleStart}>
+        <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.primary }]} onPress={handleStart}>
           <Text style={styles.primaryButtonText}>Iniciar</Text>
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity style={styles.primaryButton} onPress={handleFinish}>
+        <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.primary }]} onPress={handleFinish}>
           <Text style={styles.primaryButtonText}>Finalizar</Text>
         </TouchableOpacity>
       )}

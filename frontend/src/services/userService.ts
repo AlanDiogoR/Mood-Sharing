@@ -1,5 +1,5 @@
 import { apiClient } from '../utils/api';
-import { ApiResponse, UserProfile } from '../types';
+import { ApiResponse, UserProfile, User } from '../types';
 
 interface PhotoResponse {
   photoUrl: string;
@@ -12,6 +12,14 @@ export const userService = {
   },
   async getMyPhoto(): Promise<ApiResponse<PhotoResponse>> {
     return await apiClient.get<PhotoResponse>('/users/me/photo');
+  },
+  async updateProfile(payload: {
+    name: string;
+    partnerName?: string | null;
+    themePrimary?: string | null;
+    themeSecondary?: string | null;
+  }): Promise<ApiResponse<User>> {
+    return await apiClient.put<User>('/users/me', payload);
   },
 
   async uploadMyPhoto(

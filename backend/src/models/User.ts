@@ -4,11 +4,14 @@ export interface IUser extends Document {
   email: string;
   password: string;
   name: string;
+  partnerName?: string;
   partnerId?: mongoose.Types.ObjectId;
   fcmToken?: string; // Token FCM ou Expo Push Token para notificações push
   photoUrl?: string;
   photoFilename?: string;
   photoUploadedAt?: Date;
+  themePrimary?: string;
+  themeSecondary?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +36,11 @@ const UserSchema = new Schema<IUser>(
       required: true,
       trim: true,
     },
+    partnerName: {
+      type: String,
+      default: null,
+      trim: true,
+    },
     partnerId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
@@ -54,6 +62,16 @@ const UserSchema = new Schema<IUser>(
     photoUploadedAt: {
       type: Date,
       default: null,
+    },
+    themePrimary: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    themeSecondary: {
+      type: String,
+      default: null,
+      trim: true,
     },
   },
   {

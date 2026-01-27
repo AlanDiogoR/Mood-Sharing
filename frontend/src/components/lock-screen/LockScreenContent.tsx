@@ -84,7 +84,7 @@ export const LockScreenContent: React.FC<LockScreenContentProps> = ({onUnlock}) 
     };
   }, []);
 
-  const partnerName = user?.partnerId || 'Seu parceiro';
+  const partnerName = user?.partnerName || 'Seu parceiro';
   const moodType = currentMood?.type || MoodType.HAPPY;
   const emoji = MOOD_EMOJIS[moodType];
   const message = MOOD_MESSAGES[moodType];

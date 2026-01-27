@@ -23,9 +23,11 @@ import {getAbsoluteUrl} from '../utils/url';
 import {storage} from '../utils/storage';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
+import {useTheme} from '../store/themeContext';
 
 export const HomeScreen: React.FC = () => {
   const {user, logout, refreshUser} = useAuth();
+  const {colors} = useTheme();
   const {currentMood, partnerMood, updateMood, refreshMoods, isLoading, isNearby, distance} =
     useMood();
   const navigation = useNavigation();
@@ -181,9 +183,12 @@ export const HomeScreen: React.FC = () => {
           <View style={styles.headerText}>
             <Text style={styles.greeting}>Olá, {user?.name}!</Text>
             <TouchableOpacity onPress={handlePhotoUpload} disabled={isUploadingPhoto}>
-              <Text style={styles.photoLink}>
+              <Text style={[styles.photoLink, {color: colors.primary}]}>
                 {isUploadingPhoto ? 'Enviando...' : 'Atualizar foto'}
               </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('EditProfile' as never)}>
+              <Text style={[styles.photoLink, {color: colors.primary}]}>Editar perfil</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -216,7 +221,7 @@ export const HomeScreen: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Estado do Parceiro</Text>
         {partnerMood ? (
-          <View style={styles.partnerMoodCard}>
+          <View style={[styles.partnerMoodCard, {borderColor: colors.primary}]}>
             <Text style={styles.partnerMoodEmoji}>{getMoodEmoji(partnerMood.type)}</Text>
             <Text style={styles.partnerMoodType}>{getMoodLabel(partnerMood.type)}</Text>
             {partnerMood.message && (

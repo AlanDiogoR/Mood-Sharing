@@ -1,20 +1,23 @@
 import React from 'react';
 import {createStackNavigator} from '@react-navigation/stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {Text} from 'react-native';
+import {Ionicons} from '@expo/vector-icons';
 import {useAuth} from '../store/authContext';
+import {useTheme} from '../store/themeContext';
 import {LoginScreen} from '../screens/LoginScreen';
 import {HomeScreen} from '../screens/HomeScreen';
 import {MediaScreen} from '../screens/MediaScreen';
 import {NotesScreen} from '../screens/NotesScreen';
 import {MediaFormScreen} from '../screens/MediaFormScreen';
 import {SpecialAreaScreen} from '../screens/SpecialAreaScreen';
+import {EditProfileScreen} from '../screens/EditProfileScreen';
 import {COLORS} from '../constants/colors';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const MainTabs: React.FC = () => {
+  const {colors} = useTheme();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -37,7 +40,7 @@ const MainTabs: React.FC = () => {
         tabBarItemStyle: {
           paddingVertical: 8,
         },
-        tabBarActiveTintColor: COLORS.primary,
+        tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarLabelStyle: {
           fontSize: 12,
@@ -49,7 +52,7 @@ const MainTabs: React.FC = () => {
         component={HomeScreen}
         options={{
           tabBarLabel: 'Home',
-          tabBarIcon: ({color}) => <Text style={{color}}>🏠</Text>,
+          tabBarIcon: ({color, size}) => <Ionicons name="home" size={size ?? 20} color={color} />,
         }}
       />
       <Tab.Screen
@@ -57,7 +60,7 @@ const MainTabs: React.FC = () => {
         component={MediaScreen}
         options={{
           tabBarLabel: 'Filmes/Séries',
-          tabBarIcon: ({color}) => <Text style={{color}}>🎬</Text>,
+          tabBarIcon: ({color, size}) => <Ionicons name="film" size={size ?? 20} color={color} />,
         }}
       />
       <Tab.Screen
@@ -65,7 +68,7 @@ const MainTabs: React.FC = () => {
         component={NotesScreen}
         options={{
           tabBarLabel: 'Notas',
-          tabBarIcon: ({color}) => <Text style={{color}}>📝</Text>,
+          tabBarIcon: ({color, size}) => <Ionicons name="document-text" size={size ?? 20} color={color} />,
         }}
       />
     </Tab.Navigator>
@@ -74,6 +77,7 @@ const MainTabs: React.FC = () => {
 
 const AppNavigator: React.FC = () => {
   const {isAuthenticated, isLoading} = useAuth();
+  const {colors} = useTheme();
 
   if (isLoading) {
     return null; // Or a loading screen
@@ -115,6 +119,11 @@ const AppNavigator: React.FC = () => {
             name="SpecialArea"
             component={SpecialAreaScreen}
             options={{title: 'Area especial'}}
+          />
+          <Stack.Screen
+            name="EditProfile"
+            component={EditProfileScreen}
+            options={{title: 'Editar perfil'}}
           />
         </>
       )}

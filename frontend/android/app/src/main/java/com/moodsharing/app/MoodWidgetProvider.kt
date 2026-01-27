@@ -39,10 +39,11 @@ class MoodWidgetProvider : AppWidgetProvider() {
       val timeText = DateFormat.format("HH:mm", Date(updatedAt)).toString()
       val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
       val (greetingText, backgroundRes) = when (hour) {
-        in 5..11 -> "Bom dia" to R.drawable.widget_background_morning
-        in 12..18 -> "Boa tarde" to R.drawable.widget_background_afternoon
-        in 19..23 -> "Boa noite" to R.drawable.widget_background_night
-        else -> "Boa madrugada" to R.drawable.widget_background_dawn
+        in 5..8 -> "Bom dia" to R.drawable.widget_background_morning
+        in 16..19 -> "Boa tarde" to R.drawable.widget_background_afternoon
+        in 20..23 -> "Boa noite" to R.drawable.widget_background_night
+        in 0..4 -> "Boa madrugada" to R.drawable.widget_background_dawn
+        else -> "Boa tarde" to R.drawable.widget_background_afternoon
       }
       val moodDisplay = when (partnerMoodType) {
         "happy" -> "😊 Feliz"

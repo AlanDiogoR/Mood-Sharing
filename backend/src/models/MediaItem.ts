@@ -4,6 +4,7 @@ export type MediaType = 'movie' | 'series';
 
 export interface IMediaItem extends Document {
   userId: mongoose.Types.ObjectId;
+  pairKey: string;
   title: string;
   type: MediaType;
   notes?: string;
@@ -17,6 +18,11 @@ const MediaItemSchema = new Schema<IMediaItem>(
     userId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
+      required: true,
+      index: true,
+    },
+    pairKey: {
+      type: String,
       required: true,
       index: true,
     },
@@ -44,8 +50,8 @@ const MediaItemSchema = new Schema<IMediaItem>(
   { timestamps: true }
 );
 
-MediaItemSchema.index({ userId: 1, createdAt: 1 });
-MediaItemSchema.index({ userId: 1, orderIndex: 1 });
+MediaItemSchema.index({ pairKey: 1, createdAt: 1 });
+MediaItemSchema.index({ pairKey: 1, orderIndex: 1 });
 
 MediaItemSchema.set('toJSON', {
   virtuals: true,

@@ -67,6 +67,13 @@ export const authService = {
     return await apiClient.post<User>('/auth/link-partner', {partnerEmail});
   },
 
+  async changePassword(currentPassword: string, newPassword: string): Promise<ApiResponse<{ message: string }>> {
+    return await apiClient.post<{ message: string }>('/auth/change-password', {
+      currentPassword,
+      newPassword,
+    });
+  },
+
   isAuthenticated: async (): Promise<boolean> => {
     const token = await storage.getAccessToken();
     return !!token;

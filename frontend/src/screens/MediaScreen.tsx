@@ -14,10 +14,12 @@ import { MediaItem, MediaType } from '../types';
 import { mediaService } from '../services/mediaService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useTheme } from '../store/themeContext';
 
 export const MediaScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const { colors } = useTheme();
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<MediaType | 'all'>('all');
@@ -108,16 +110,32 @@ export const MediaScreen: React.FC = () => {
       disabled={isActive}
       style={[styles.card, isActive && styles.cardActive]}>
       <View style={styles.cardInfo}>
-        <Text style={styles.cardTitle}>{item.title}</Text>
-        <Text style={styles.cardSubtitle}>{item.type === 'movie' ? 'Filme' : 'Série'}</Text>
-        {!!item.notes && <Text style={styles.cardNotes}>{item.notes}</Text>}
+        <Text style={[styles.cardTitle, { color: colors.primary }, isActive && styles.cardTitleActive]}>
+          {item.title}
+        </Text>
+        <Text style={[styles.cardSubtitle, isActive && styles.cardSubtitleActive]}>
+          {item.type === 'movie' ? 'Filme' : 'Série'}
+        </Text>
+        {!!item.notes && (
+          <Text style={[styles.cardNotes, isActive && styles.cardNotesActive]}>{item.notes}</Text>
+        )}
       </View>
       <View style={styles.cardActions}>
         <TouchableOpacity onPress={() => handleEdit(item)} style={styles.actionButton}>
-          <Text style={styles.actionText}>Editar</Text>
+          <Text style={[styles.actionText, { color: colors.primary }, isActive && styles.actionTextActive]}>
+            Editar
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => handleDelete(item)} style={styles.actionButton}>
-          <Text style={[styles.actionText, styles.deleteText]}>Remover</Text>
+          <Text
+            style={[
+              styles.actionText,
+              { color: colors.primary },
+              isActive && styles.actionTextActive,
+              styles.deleteText,
+            ]}>
+            Remover
+          </Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -129,7 +147,7 @@ export const MediaScreen: React.FC = () => {
         <View>
           <Text style={styles.title}>Filmes e Séries</Text>
         </View>
-        <TouchableOpacity style={styles.addButton} onPress={handleStartCreate}>
+        <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.primary }]} onPress={handleStartCreate}>
           <Text style={styles.addButtonText}>+ Adicionar</Text>
         </TouchableOpacity>
       </View>
@@ -138,9 +156,18 @@ export const MediaScreen: React.FC = () => {
         {(['all', 'movie', 'series'] as const).map(option => (
           <TouchableOpacity
             key={option}
-            style={[styles.filterChip, filter === option && styles.filterChipActive]}
+            style={[
+              styles.filterChip,
+              filter === option && styles.filterChipActive,
+              filter === option && { backgroundColor: colors.primary, borderColor: colors.primary },
+            ]}
             onPress={() => setFilter(option)}>
-            <Text style={[styles.filterChipText, filter === option && styles.filterChipTextActive]}>
+            <Text
+              style={[
+                styles.filterChipText,
+                { color: colors.primary },
+                filter === option && styles.filterChipTextActive,
+              ]}>
               {option === 'all' ? 'Todos' : option === 'movie' ? 'Filmes' : 'Séries'}
             </Text>
           </TouchableOpacity>
@@ -184,7 +211,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   addButtonText: {
-    color: COLORS.background,
+    color: '#ffffff',
     fontWeight: '700',
     fontSize: 13,
   },
@@ -203,7 +230,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#C7D2FE',
+    backgroundColor: '#FFFFFF',
     marginRight: 8,
   },
   filterChipActive: {
@@ -211,48 +239,58 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   filterChipText: {
-    color: COLORS.textSecondary,
+    color: COLORS.primary,
     fontWeight: '600',
   },
   filterChipTextActive: {
-    color: COLORS.background,
+    color: '#FFFFFF',
   },
   listContent: {
     paddingBottom: 140,
     paddingHorizontal: 16,
   },
   card: {
-    backgroundColor: COLORS.backgroundCard,
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E2E8F0',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   cardActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#E8F1FF',
+    borderColor: '#A3BFFA',
   },
   cardInfo: {
     flex: 1,
     paddingRight: 12,
   },
   cardTitle: {
-    color: COLORS.text,
+    color: COLORS.primary,
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 4,
   },
+  cardTitleActive: {
+    color: COLORS.primary,
+  },
   cardSubtitle: {
-    color: COLORS.textSecondary,
+    color: '#475569',
     fontSize: 13,
     marginBottom: 4,
   },
+  cardSubtitleActive: {
+    color: '#334155',
+  },
   cardNotes: {
-    color: COLORS.textMuted,
+    color: '#64748B',
     fontSize: 12,
+  },
+  cardNotesActive: {
+    color: '#475569',
   },
   cardActions: {
     justifyContent: 'space-between',
@@ -261,8 +299,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   actionText: {
-    color: COLORS.textSecondary,
+    color: COLORS.primary,
     fontWeight: '600',
+  },
+  actionTextActive: {
+    color: COLORS.primary,
   },
   deleteText: {
     color: COLORS.error,

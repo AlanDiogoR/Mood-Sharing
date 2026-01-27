@@ -3,8 +3,29 @@ import { body, param, validationResult } from 'express-validator';
 import mongoose from 'mongoose';
 import { MediaItem } from '../models/MediaItem';
 import { SortOrder } from 'mongoose';
+import { User } from '../models/User';
 
 const getUserId = (req: Request): string | undefined => (req as any).user?.userId;
+
+const getPairKey = (userId: string, partnerId: string): string => {
+  const sorted = [userId, partnerId].sort();
+  return `${sorted[0]}:${sorted[1]}`;
+};
+
+const getUserPairKey = async (userId: string): Promise<string> => {
+  const user = await User.findById(userId).select('partnerId');
+  if (!user?.partnerId) {
+    return userId;
+  }
+  return getPairKey(userId, user.partnerId.toString());
+};
+
+const ensurePairKey = async (userId: string, pairKey: string): Promise<void> => {
+  await MediaItem.updateMany(
+    { userId, $or: [{ pairKey: { $exists: false } }, { pairKey: null }] },
+    { $set: { pairKey } }
+  );
+};
 
 export const validateCreateMedia = [
   body('title').trim().isLength({ min: 1 }).withMessage('Título é obrigatório'),
@@ -43,11 +64,13 @@ export const createMedia = async (req: Request, res: Response): Promise<void> =>
     }
 
     const { title, type, notes } = req.body;
-    const hasManualOrder = await MediaItem.exists({ userId, orderIndex: { $ne: null } });
+    const pairKey = await getUserPairKey(userId);
+    await ensurePairKey(userId, pairKey);
+    const hasManualOrder = await MediaItem.exists({ pairKey, orderIndex: { $ne: null } });
 
     let orderIndex: number | null = null;
     if (hasManualOrder) {
-      const last = await MediaItem.findOne({ userId, orderIndex: { $ne: null } })
+      const last = await MediaItem.findOne({ pairKey, orderIndex: { $ne: null } })
         .sort({ orderIndex: -1 })
         .select('orderIndex');
       orderIndex = (last?.orderIndex ?? -1) + 1;
@@ -55,6 +78,7 @@ export const createMedia = async (req: Request, res: Response): Promise<void> =>
 
     const item = await MediaItem.create({
       userId,
+      pairKey,
       title,
       type,
       notes,
@@ -76,8 +100,10 @@ export const listMedia = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const hasManualOrder = await MediaItem.exists({ userId, orderIndex: { $ne: null } });
-    let query = MediaItem.find({ userId });
+    const pairKey = await getUserPairKey(userId);
+    await ensurePairKey(userId, pairKey);
+    const hasManualOrder = await MediaItem.exists({ pairKey, orderIndex: { $ne: null } });
+    let query = MediaItem.find({ pairKey });
     if (hasManualOrder) {
       query = query.sort([['orderIndex', 1 as SortOrder], ['createdAt', 1 as SortOrder]]);
     } else {
@@ -106,7 +132,9 @@ export const getMedia = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const item = await MediaItem.findOne({ _id: req.params.id, userId });
+    const pairKey = await getUserPairKey(userId);
+    await ensurePairKey(userId, pairKey);
+    const item = await MediaItem.findOne({ _id: req.params.id, pairKey });
     if (!item) {
       res.status(404).json({ success: false, error: 'Item não encontrado' });
       return;
@@ -133,8 +161,10 @@ export const updateMedia = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
+    const pairKey = await getUserPairKey(userId);
+    await ensurePairKey(userId, pairKey);
     const item = await MediaItem.findOneAndUpdate(
-      { _id: req.params.id, userId },
+      { _id: req.params.id, pairKey },
       { $set: req.body },
       { new: true }
     );
@@ -165,7 +195,9 @@ export const deleteMedia = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const item = await MediaItem.findOneAndDelete({ _id: req.params.id, userId });
+    const pairKey = await getUserPairKey(userId);
+    await ensurePairKey(userId, pairKey);
+    const item = await MediaItem.findOneAndDelete({ _id: req.params.id, pairKey });
     if (!item) {
       res.status(404).json({ success: false, error: 'Item não encontrado' });
       return;
@@ -193,9 +225,11 @@ export const reorderMedia = async (req: Request, res: Response): Promise<void> =
     }
 
     const orderedIds: string[] = req.body.orderedIds;
+    const pairKey = await getUserPairKey(userId);
+    await ensurePairKey(userId, pairKey);
 
     const objectIds = orderedIds.map((id) => new mongoose.Types.ObjectId(id));
-    const items = await MediaItem.find({ _id: { $in: objectIds }, userId }).select('_id');
+    const items = await MediaItem.find({ _id: { $in: objectIds }, pairKey }).select('_id');
     if (items.length !== orderedIds.length) {
       res.status(400).json({ success: false, error: 'Lista inválida de itens' });
       return;
@@ -203,7 +237,7 @@ export const reorderMedia = async (req: Request, res: Response): Promise<void> =
 
     const bulkOps = orderedIds.map((id, index) => ({
       updateOne: {
-        filter: { _id: new mongoose.Types.ObjectId(id), userId: new mongoose.Types.ObjectId(userId) },
+        filter: { _id: new mongoose.Types.ObjectId(id), pairKey },
         update: { $set: { orderIndex: index } },
       },
     }));

@@ -1,6 +1,7 @@
 import React, {useState} from 'react';
 import {View, TextInput, Text, StyleSheet, TextInputProps, ViewStyle} from 'react-native';
 import {COLORS} from '../../constants/colors';
+import {useTheme} from '../../store/themeContext';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -15,6 +16,7 @@ export const Input: React.FC<InputProps> = ({
   style,
   ...props
 }) => {
+  const {colors} = useTheme();
   const [isFocused, setIsFocused] = useState(false);
 
   return (
@@ -23,7 +25,7 @@ export const Input: React.FC<InputProps> = ({
       <TextInput
         style={[
           styles.input,
-          isFocused && styles.inputFocused,
+          isFocused && [styles.inputFocused, {borderColor: colors.primary}],
           error && styles.inputError,
           style,
         ]}

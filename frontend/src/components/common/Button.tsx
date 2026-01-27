@@ -1,6 +1,7 @@
 import React from 'react';
 import {TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle} from 'react-native';
 import {COLORS} from '../../constants/colors';
+import {useTheme} from '../../store/themeContext';
 
 interface ButtonProps {
   title: string;
@@ -21,14 +22,23 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
 }) => {
+  const {colors} = useTheme();
   const buttonStyle = [
     styles.button,
     styles[variant],
+    variant === 'primary' && {backgroundColor: colors.primary},
+    variant === 'secondary' && {backgroundColor: colors.secondary},
+    variant === 'outline' && {borderColor: colors.primary},
     (disabled || loading) && styles.disabled,
     style,
   ];
 
-  const buttonTextStyle = [styles.text, styles[`${variant}Text`], textStyle];
+  const buttonTextStyle = [
+    styles.text,
+    styles[`${variant}Text`],
+    variant === 'outline' && {color: colors.primary},
+    textStyle,
+  ];
 
   return (
     <TouchableOpacity
@@ -37,7 +47,7 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={disabled || loading}
       activeOpacity={0.7}>
       {loading ? (
-        <ActivityIndicator color={variant === 'outline' ? COLORS.primary : COLORS.text} />
+        <ActivityIndicator color={variant === 'outline' ? colors.primary : COLORS.text} />
       ) : (
         <Text style={buttonTextStyle}>{title}</Text>
       )}
