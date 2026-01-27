@@ -1,12 +1,60 @@
 import { Request, Response } from 'express';
 import { Mood, MoodType, ILocation } from '../models/Mood';
 import { User } from '../models/User';
+import { CoupleDaySummary } from '../models/CoupleDaySummary';
 import { getMoodEmoji } from '../utils/moodEmojis';
 import { calculateDistance, isWithinProximity } from '../utils/distance';
 import { sendMoodChangeNotification as sendExpoMoodChangeNotification, sendProximityNotification as sendExpoProximityNotification, isExpoPushToken } from '../services/expoPushService';
 import { sendMoodChangeNotification as sendFcmMoodChangeNotification, sendProximityNotification as sendFcmProximityNotification } from '../services/firebaseAdmin';
 
 const PROXIMITY_THRESHOLD_KM = 1.0;
+const MAX_MEETING_GAP_MINUTES = 30;
+
+const getPairKey = (userId: string, partnerId: string): string => {
+  const sorted = [userId, partnerId].sort();
+  return `${sorted[0]}:${sorted[1]}`;
+};
+
+const getDateKey = (date = new Date()): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const recordCoupleMeeting = async (
+  userId: string,
+  partnerId: string,
+  timestamp = new Date()
+): Promise<void> => {
+  const pairKey = getPairKey(userId, partnerId);
+  const dateKey = getDateKey(timestamp);
+  const summary = await CoupleDaySummary.findOne({ pairKey, dateKey });
+
+  if (!summary) {
+    await CoupleDaySummary.create({
+      pairKey,
+      dateKey,
+      totalMinutesTogether: 0,
+      activeMinutesTogether: 0,
+      lastSeenAt: timestamp,
+    });
+    return;
+  }
+
+  if (summary.lastSeenAt) {
+    const diffMinutes = Math.max(
+      0,
+      Math.round((timestamp.getTime() - summary.lastSeenAt.getTime()) / 60000)
+    );
+    if (diffMinutes > 0 && diffMinutes <= MAX_MEETING_GAP_MINUTES) {
+      summary.totalMinutesTogether += diffMinutes;
+    }
+  }
+
+  summary.lastSeenAt = timestamp;
+  await summary.save();
+};
 
 export const getCurrentMood = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -89,7 +137,7 @@ export const getPartnerMood = async (req: Request, res: Response): Promise<void>
 export const updateMood = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user?.userId;
-    const { type, message, location } = req.body;
+    const { type, message, location, extraEmoji, extraLabel } = req.body;
 
     if (!type || !Object.values(MoodType).includes(type)) {
       res.status(400).json({
@@ -108,6 +156,8 @@ export const updateMood = async (req: Request, res: Response): Promise<void> => 
         type,
         emoji,
         message,
+        extraEmoji: extraEmoji ?? null,
+        extraLabel: extraLabel ?? null,
         location,
       },
       {
@@ -162,7 +212,7 @@ export const updateMood = async (req: Request, res: Response): Promise<void> => 
 export const updateMoodWithProximity = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user?.userId;
-    const { type, location, partnerLocation } = req.body;
+    const { type, location, partnerLocation, extraEmoji, extraLabel } = req.body;
 
     if (!type || !Object.values(MoodType).includes(type)) {
       res.status(400).json({
@@ -193,6 +243,8 @@ export const updateMoodWithProximity = async (req: Request, res: Response): Prom
       {
         type: finalType,
         emoji,
+        extraEmoji: extraEmoji ?? null,
+        extraLabel: extraLabel ?? null,
         location,
       },
       {
@@ -205,11 +257,18 @@ export const updateMoodWithProximity = async (req: Request, res: Response): Prom
     if (nearby) {
       const user = await User.findById(userId);
       if (user?.partnerId) {
+        try {
+          await recordCoupleMeeting(userId, user.partnerId.toString(), new Date());
+        } catch (meetingError) {
+          console.error('Erro ao registrar encontro do casal:', meetingError);
+        }
         await Mood.findOneAndUpdate(
           { userId: user.partnerId },
           {
             type: MoodType.HAPPY,
             emoji: getMoodEmoji(MoodType.HAPPY),
+            extraEmoji: null,
+            extraLabel: null,
             location: partnerLocation,
           },
           {

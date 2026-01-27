@@ -13,24 +13,32 @@ export const moodService = {
   async updateMood(
     type: MoodType,
     message?: string,
-    location?: Location
+    location?: Location,
+    extraEmoji?: string | null,
+    extraLabel?: string | null
   ): Promise<ApiResponse<Mood>> {
     return await apiClient.post<Mood>('/moods', {
       type,
       message,
       location,
+      extraEmoji,
+      extraLabel,
     });
   },
 
   async updateMoodWithProximity(
     type: MoodType,
     location: Location,
-    partnerLocation: Location
+    partnerLocation: Location,
+    extraEmoji?: string | null,
+    extraLabel?: string | null
   ): Promise<ApiResponse<Mood>> {
     return await apiClient.post<Mood>('/moods/with-proximity', {
       type,
       location,
       partnerLocation,
+      extraEmoji,
+      extraLabel,
     });
   },
 

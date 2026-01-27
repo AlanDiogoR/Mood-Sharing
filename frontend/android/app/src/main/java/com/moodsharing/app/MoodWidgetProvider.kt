@@ -9,8 +9,6 @@ import android.view.View
 import java.util.Date
 import java.util.Calendar
 import java.util.Locale
-import com.bumptech.glide.Glide
-import com.bumptech.glide.request.target.AppWidgetTarget
 
 class MoodWidgetProvider : AppWidgetProvider() {
   override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
@@ -24,7 +22,6 @@ class MoodWidgetProvider : AppWidgetProvider() {
     private const val KEY_PARTNER_NAME = "partnerName"
     private const val KEY_PARTNER_MESSAGE = "partnerMessage"
     private const val KEY_UPDATED_AT = "updatedAt"
-    private const val KEY_PARTNER_PHOTO = "partnerPhotoUrl"
     private const val KEY_PARTNER_MOOD_TYPE = "partnerMoodType"
     private const val KEY_PARTNER_DISTANCE = "partnerDistanceKm"
 
@@ -33,7 +30,6 @@ class MoodWidgetProvider : AppWidgetProvider() {
       val partnerName = prefs.getString(KEY_PARTNER_NAME, "Parceiro") ?: "Parceiro"
       val partnerMessage = prefs.getString(KEY_PARTNER_MESSAGE, "Atualizou o humor") ?: "Atualizou o humor"
       val updatedAt = prefs.getLong(KEY_UPDATED_AT, System.currentTimeMillis())
-      val partnerPhotoUrl = prefs.getString(KEY_PARTNER_PHOTO, null)
       val partnerMoodType = prefs.getString(KEY_PARTNER_MOOD_TYPE, null)
       val partnerDistanceKm = prefs.getFloat(KEY_PARTNER_DISTANCE, -1f)
       val timeText = DateFormat.format("HH:mm", Date(updatedAt)).toString()
@@ -71,18 +67,6 @@ class MoodWidgetProvider : AppWidgetProvider() {
         views.setViewVisibility(R.id.widget_partner_distance, View.VISIBLE)
       } else {
         views.setViewVisibility(R.id.widget_partner_distance, View.GONE)
-      }
-
-      if (partnerPhotoUrl.isNullOrBlank()) {
-        views.setImageViewResource(R.id.widget_partner_photo, R.drawable.widget_avatar_placeholder)
-      } else {
-        val appWidgetTarget = AppWidgetTarget(context, R.id.widget_partner_photo, views, appWidgetId)
-        Glide.with(context.applicationContext)
-          .asBitmap()
-          .load(partnerPhotoUrl)
-          .placeholder(R.drawable.widget_avatar_placeholder)
-          .error(R.drawable.widget_avatar_placeholder)
-          .into(appWidgetTarget)
       }
 
       appWidgetManager.updateAppWidget(appWidgetId, views)

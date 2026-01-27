@@ -28,6 +28,8 @@ export interface Mood {
   type: MoodType;
   emoji: string;
   message?: string;
+  extraEmoji?: string | null;
+  extraLabel?: string | null;
   location?: {
     latitude: number;
     longitude: number;
@@ -112,6 +114,17 @@ export interface SharedNote {
   updatedAt: string;
 }
 
+export interface SharedPhoto {
+  id: string;
+  pairKey: string;
+  senderId: string;
+  receiverId: string;
+  photoUrl: string;
+  photoFilename: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface WorkoutSummaryEntry {
   id?: string;
   dateKey: string;
@@ -127,6 +140,28 @@ export interface WeeklyWorkoutSummary {
   totals: {
     totalMinutes: number;
     totalCalories: number;
+    totalDays: number;
+  };
+}
+
+export interface CoupleDaySummary {
+  id: string;
+  pairKey: string;
+  dateKey: string;
+  totalMinutesTogether: number;
+  activeMinutesTogether: number;
+  lastSeenAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WeeklyMeetingSummary {
+  startKey: string;
+  endKey: string;
+  entries: CoupleDaySummary[];
+  totals: {
+    totalMinutesTogether: number;
+    activeMinutesTogether: number;
     totalDays: number;
   };
 }

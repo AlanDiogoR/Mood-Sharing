@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
 import { WorkoutSummary } from '../models/WorkoutSummary';
+import { CoupleDaySummary } from '../models/CoupleDaySummary';
+import { User } from '../models/User';
+
+const ACTIVE_WINDOW_MINUTES = 90;
 
 const getUserId = (req: Request): string | undefined => (req as any).user?.userId;
 
@@ -18,6 +22,11 @@ const getWeekStart = (date = new Date()): Date => {
   current.setDate(current.getDate() + diff);
   current.setHours(0, 0, 0, 0);
   return current;
+};
+
+const getPairKey = (userId: string, partnerId: string): string => {
+  const sorted = [userId, partnerId].sort();
+  return `${sorted[0]}:${sorted[1]}`;
 };
 
 export const validateSaveWorkout = [
@@ -53,6 +62,22 @@ export const saveWorkoutSummary = async (req: Request, res: Response): Promise<v
       },
       { new: true, upsert: true }
     );
+
+    const user = await User.findById(userId).select('partnerId');
+    if (user?.partnerId) {
+      const pairKey = getPairKey(userId, user.partnerId.toString());
+      const daySummary = await CoupleDaySummary.findOne({ pairKey, dateKey });
+      if (daySummary?.lastSeenAt) {
+        const completedDate = new Date(completedAt);
+        const diffMinutes = Math.abs(
+          (completedDate.getTime() - daySummary.lastSeenAt.getTime()) / 60000
+        );
+        if (diffMinutes <= ACTIVE_WINDOW_MINUTES) {
+          daySummary.activeMinutesTogether += durationMinutes;
+          await daySummary.save();
+        }
+      }
+    }
 
     res.json({ success: true, data: summary });
   } catch (error: any) {

@@ -4,17 +4,22 @@ import {moodService} from '../services/moodService';
 import {locationService} from '../services/locationService';
 import {notificationService} from '../services/notificationService';
 import {calculateDistance, isWithinProximity} from '../utils/distance';
-import {getAbsoluteUrl} from '../utils/url';
 import {CONFIG} from '../constants/config';
 import {useAuth} from './authContext';
 import {widgetService} from '../services/widgetService';
 import {userService} from '../services/userService';
+import {meetingService} from '../services/meetingService';
 
 interface MoodContextType {
   currentMood: Mood | null;
   partnerMood: Mood | null;
   isLoading: boolean;
-  updateMood: (type: MoodType, message?: string) => Promise<void>;
+  updateMood: (
+    type: MoodType,
+    message?: string,
+    extraEmoji?: string | null,
+    extraLabel?: string | null
+  ) => Promise<void>;
   refreshMoods: () => Promise<void>;
   isNearby: boolean;
   distance: number | null;
@@ -50,7 +55,9 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
   const lastWidgetKeyRef = useRef<string | null>(null);
   const lastProximityStateRef = useRef<boolean>(false);
   const lastPartnerFetchRef = useRef<number>(0);
+  const lastMeetingPingRef = useRef<number>(0);
   const PARTNER_FETCH_INTERVAL_MS = 60 * 1000;
+  const MEETING_PING_INTERVAL_MS = 10 * 60 * 1000;
 
   useEffect(() => {
     currentMoodRef.current = currentMood;
@@ -138,19 +145,39 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
     const wasNearby = lastProximityStateRef.current;
     lastProximityStateRef.current = nearby;
 
+    if (nearby) {
+      const now = Date.now();
+      if (now - lastMeetingPingRef.current >= MEETING_PING_INTERVAL_MS) {
+        lastMeetingPingRef.current = now;
+        try {
+          await meetingService.recordProximity(now);
+        } catch (error) {
+          console.error('Error recording proximity:', error);
+        }
+      }
+    }
+
     if (nearby && !wasNearby && activeCurrentMood?.type !== MoodType.HAPPY) {
       // Auto-update both to happy when nearby
-      await updateMoodWithProximity(MoodType.HAPPY, myLocation, partnerLocation);
+      await updateMoodWithProximity(MoodType.HAPPY, myLocation, partnerLocation, null, null);
     }
   };
 
   const updateMoodWithProximity = async (
     type: MoodType,
     myLocation: Location,
-    partnerLocation: Location
+    partnerLocation: Location,
+    extraEmoji?: string | null,
+    extraLabel?: string | null
   ) => {
     try {
-      const response = await moodService.updateMoodWithProximity(type, myLocation, partnerLocation);
+      const response = await moodService.updateMoodWithProximity(
+        type,
+        myLocation,
+        partnerLocation,
+        extraEmoji,
+        extraLabel
+      );
       if (response.success && response.data) {
         setCurrentMood(response.data);
         await refreshMoods();
@@ -214,14 +241,6 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
 
       const partnerName =
         user?.partnerName?.trim() || resolvedPartnerUser?.name || 'Parceiro';
-      const rawPartnerPhotoUrl = getAbsoluteUrl(resolvedPartnerUser?.photoUrl);
-      const partnerPhotoUpdatedAt = resolvedPartnerUser?.photoUploadedAt;
-      const partnerPhotoUrl =
-        rawPartnerPhotoUrl && partnerPhotoUpdatedAt
-          ? `${rawPartnerPhotoUrl}${rawPartnerPhotoUrl.includes('?') ? '&' : '?'}t=${encodeURIComponent(
-              partnerPhotoUpdatedAt
-            )}`
-          : rawPartnerPhotoUrl;
       const partnerData = partnerResponse.success ? partnerResponse.data : undefined;
 
       // Atualiza notificação da tela bloqueada quando os humores mudam
@@ -253,8 +272,6 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
             partnerType: partnerData?.type || '',
             partnerMessage: partnerData?.message || '',
             partnerName,
-            partnerPhotoUrl: partnerPhotoUrl || '',
-            partnerPhotoUpdatedAt: partnerPhotoUpdatedAt || '',
             partnerDistanceKm: distance ?? null,
           });
 
@@ -263,7 +280,6 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
             widgetService.updatePartnerMoodWidget(
               partnerName,
               partnerData?.message || '',
-              partnerPhotoUrl,
               partnerData?.type || null,
               distance ?? null
             );
@@ -277,7 +293,12 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
     }
   };
 
-  const updateMood = async (type: MoodType, message?: string) => {
+  const updateMood = async (
+    type: MoodType,
+    message?: string,
+    extraEmoji?: string | null,
+    extraLabel?: string | null
+  ) => {
     if (!user) {
       return;
     }
@@ -285,7 +306,13 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
     setIsLoading(true);
     try {
       const location = await locationService.getCurrentLocation();
-      const response = await moodService.updateMood(type, message, location);
+      const response = await moodService.updateMood(
+        type,
+        message,
+        location,
+        extraEmoji,
+        extraLabel
+      );
 
       if (response.success && response.data) {
         setCurrentMood(response.data);

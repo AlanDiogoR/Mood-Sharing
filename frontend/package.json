@@ -1,6 +1,6 @@
 {
   "name": "mood-sharing-app",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "App React Native para compartilhar estados emocionais entre casais",
   "scripts": {
     "start": "expo start",

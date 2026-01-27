@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import { COLORS } from '../constants/colors';
 import { storage } from '../utils/storage';
 import { useTheme } from '../store/themeContext';
@@ -223,7 +223,7 @@ export const SpecialHomeScreen: React.FC<SpecialHomeScreenProps> = ({ onGoToTrei
   }, []);
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Resumo do dia</Text>
       <Text style={styles.message}>{dailyMessage}</Text>
 
@@ -312,7 +312,7 @@ export const SpecialHomeScreen: React.FC<SpecialHomeScreenProps> = ({ onGoToTrei
           </>
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 };
 
@@ -320,6 +320,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+  },
+  content: {
+    paddingBottom: 40,
   },
   title: {
     fontSize: 22,

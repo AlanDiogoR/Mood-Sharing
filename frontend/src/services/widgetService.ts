@@ -7,7 +7,6 @@ export const widgetService = {
   updatePartnerMoodWidget: (
     partnerName: string,
     message: string,
-    partnerPhotoUrl?: string | null,
     partnerMoodType?: MoodType | null,
     partnerDistanceKm?: number | null
   ) => {
@@ -19,7 +18,6 @@ export const widgetService = {
     }
     const safeName = partnerName?.trim() || 'Parceiro';
     const safeMessage = message?.trim() || 'Atualizou o humor';
-    const safePhotoUrl = partnerPhotoUrl?.trim() || null;
     const safeMoodType = partnerMoodType || null;
     const safeDistanceKm =
       typeof partnerDistanceKm === 'number' && Number.isFinite(partnerDistanceKm)
@@ -28,7 +26,6 @@ export const widgetService = {
     MoodWidgetModule.updateMoodWidget(
       safeName,
       safeMessage,
-      safePhotoUrl,
       safeMoodType,
       safeDistanceKm
     );

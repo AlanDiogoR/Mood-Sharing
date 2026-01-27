@@ -10,6 +10,8 @@ import mediaRoutes from './routes/mediaRoutes';
 import notesRoutes from './routes/notesRoutes';
 import workoutRoutes from './routes/workoutRoutes';
 import goalRoutes from './routes/goalRoutes';
+import photoRoutes from './routes/photoRoutes';
+import meetingRoutes from './routes/meetingRoutes';
 import { uploadDir, isServerless } from './config/uploads';
 import { getPublicUserPhoto } from './controllers/userController';
 
@@ -68,6 +70,8 @@ app.use('/api/media', mediaRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/workouts', workoutRoutes);
 app.use('/api/goals', goalRoutes);
+app.use('/api/photos', photoRoutes);
+app.use('/api/meetings', meetingRoutes);
 
 // 404 handler
 app.use((req, res) => {

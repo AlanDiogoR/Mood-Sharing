@@ -22,6 +22,8 @@ export interface IMood extends Document {
   type: MoodType;
   emoji: string;
   message?: string;
+  extraEmoji?: string | null;
+  extraLabel?: string | null;
   location?: ILocation;
   createdAt: Date;
   updatedAt: Date;
@@ -53,6 +55,16 @@ const MoodSchema = new Schema<IMood>(
     },
     message: {
       type: String,
+      trim: true,
+    },
+    extraEmoji: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    extraLabel: {
+      type: String,
+      default: null,
       trim: true,
     },
     location: {
