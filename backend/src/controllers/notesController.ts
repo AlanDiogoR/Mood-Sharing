@@ -1,7 +1,8 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { validationResult } from 'express-validator';
 import { SharedNote } from '../models/SharedNote';
 import { User } from '../models/User';
+import { AuthRequest } from '../middleware/auth';
 
 const getPairKey = (userId: string, partnerId: string): string => {
   const sorted = [userId, partnerId].sort();
@@ -16,9 +17,9 @@ const getUserPairKey = async (userId: string): Promise<string | null> => {
   return getPairKey(userId, user.partnerId.toString());
 };
 
-export const listNotes = async (req: Request, res: Response): Promise<void> => {
+export const listNotes = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ success: false, error: 'Usuário não autenticado' });
       return;
@@ -30,15 +31,27 @@ export const listNotes = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const notes = await SharedNote.find({ pairKey }).sort({ updatedAt: -1 });
-    res.json({ success: true, data: notes });
+    const page = Math.max(1, parseInt(String(req.query.page ?? '1'), 10));
+    const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? '50'), 10)));
+    const skip = (page - 1) * limit;
+
+    const [notes, total] = await Promise.all([
+      SharedNote.find({ pairKey }).sort({ updatedAt: -1 }).skip(skip).limit(limit),
+      SharedNote.countDocuments({ pairKey }),
+    ]);
+
+    res.json({
+      success: true,
+      data: notes,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
   } catch (error: any) {
     console.error('Erro ao listar notas:', error);
     res.status(500).json({ success: false, error: 'Erro ao listar notas' });
   }
 };
 
-export const createNote = async (req: Request, res: Response): Promise<void> => {
+export const createNote = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -46,7 +59,7 @@ export const createNote = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ success: false, error: 'Usuário não autenticado' });
       return;
@@ -72,7 +85,7 @@ export const createNote = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-export const updateNote = async (req: Request, res: Response): Promise<void> => {
+export const updateNote = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -80,7 +93,7 @@ export const updateNote = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ success: false, error: 'Usuário não autenticado' });
       return;
@@ -112,7 +125,7 @@ export const updateNote = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-export const deleteNote = async (req: Request, res: Response): Promise<void> => {
+export const deleteNote = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -120,7 +133,7 @@ export const deleteNote = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ success: false, error: 'Usuário não autenticado' });
       return;

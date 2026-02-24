@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { getStore } from '@netlify/blobs';
 import { User } from '../models/User';
 import { isServerless, uploadDir } from '../config/uploads';
+import { AuthRequest } from '../middleware/auth';
 
 const deleteFileIfExists = async (filePath: string): Promise<void> => {
   try {
@@ -74,7 +75,7 @@ export const validateUpdateProfile = [
     .withMessage('Cor secundária inválida'),
 ];
 
-export const updateUserProfile = async (req: Request, res: Response): Promise<void> => {
+export const updateUserProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -82,7 +83,7 @@ export const updateUserProfile = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ success: false, error: 'Usuário não autenticado' });
       return;
@@ -119,13 +120,13 @@ export const updateUserProfile = async (req: Request, res: Response): Promise<vo
   }
 };
 
-export const uploadUserPhoto = async (req: Request, res: Response): Promise<void> => {
+export const uploadUserPhoto = async (req: AuthRequest, res: Response): Promise<void> => {
   const uploadedFilename = req.file?.filename;
   const uploadedPath =
     !isServerless && uploadedFilename ? path.resolve(uploadDir, uploadedFilename) : null;
 
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ success: false, error: 'Usuário não autenticado' });
       return;
@@ -213,9 +214,9 @@ export const uploadUserPhoto = async (req: Request, res: Response): Promise<void
   }
 };
 
-export const getUserPhoto = async (req: Request, res: Response): Promise<void> => {
+export const getUserPhoto = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ success: false, error: 'Usuário não autenticado' });
       return;
@@ -245,9 +246,9 @@ export const getUserPhoto = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-export const getUserPublic = async (req: Request, res: Response): Promise<void> => {
+export const getUserPublic = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const currentUserId = (req as any).user?.userId;
+    const currentUserId = req.user?.userId;
     const targetUserId = req.params.id;
 
     if (!currentUserId) {
@@ -287,13 +288,17 @@ export const getUserPublic = async (req: Request, res: Response): Promise<void> 
 export const getPublicUserPhoto = async (req: Request, res: Response): Promise<void> => {
   try {
     const key = req.params.key;
-    if (!key) {
+    if (!key || /[\/\\]|\.\./.test(key)) {
       res.status(400).json({ success: false, error: 'Chave inválida' });
       return;
     }
 
     if (!isServerless) {
-      const filePath = path.resolve(uploadDir, key);
+      const filePath = path.join(uploadDir, path.basename(key));
+      if (!filePath.startsWith(path.resolve(uploadDir))) {
+        res.status(400).json({ success: false, error: 'Chave inválida' });
+        return;
+      }
       res.sendFile(filePath, err => {
         if (err) {
           res.status(404).json({ success: false, error: 'Foto não encontrada' });

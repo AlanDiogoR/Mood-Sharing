@@ -77,6 +77,39 @@ export async function sendMoodChangeNotification(
 }
 
 /**
+ * Envia notificação genérica via Expo Push
+ */
+export async function sendGenericNotification(
+  expoPushToken: string,
+  title: string,
+  body: string,
+  data?: Record<string, any>
+): Promise<void> {
+  if (!isExpoPushToken(expoPushToken)) {
+    return;
+  }
+
+  const messages: ExpoPushMessage[] = [{
+    to: expoPushToken,
+    sound: 'default',
+    title,
+    body,
+    data: data || {},
+    priority: 'high',
+    channelId: 'mood_sharing_channel',
+  }];
+
+  try {
+    const chunks = expo.chunkPushNotifications(messages);
+    for (const chunk of chunks) {
+      await expo.sendPushNotificationsAsync(chunk);
+    }
+  } catch (error) {
+    console.error('Erro ao enviar notificação:', error);
+  }
+}
+
+/**
  * Envia notificação de proximidade para o parceiro
  */
 export async function sendProximityNotification(

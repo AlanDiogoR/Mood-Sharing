@@ -2,7 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
+import { env } from './config/env';
 import authRoutes from './routes/authRoutes';
 import moodRoutes from './routes/moodRoutes';
 import userRoutes from './routes/userRoutes';
@@ -15,26 +16,29 @@ import meetingRoutes from './routes/meetingRoutes';
 import { uploadDir, isServerless } from './config/uploads';
 import { getPublicUserPhoto } from './controllers/userController';
 
-// Carrega variáveis de ambiente
-dotenv.config();
-
 export const app = express();
 
-// Middlewares
+// Security middlewares
 app.use(helmet());
-// Configuração de CORS mais permissiva para desenvolvimento
+
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Muitas requisições. Tente novamente mais tarde.' },
+});
+app.use('/api', globalLimiter);
+
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    // Em desenvolvimento, permite todas as origens (incluindo Expo Go)
-    if (process.env.NODE_ENV === 'development') {
+    if (!env.IS_PRODUCTION) {
       callback(null, true);
       return;
     }
 
-    // Em produção, verifica as origens permitidas
-    const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || [];
     const localDevOrigins = ['http://localhost:8081', 'http://localhost:19006'];
-    const allAllowed = [...allowedOrigins, ...localDevOrigins];
+    const allAllowed = [...env.CORS_ORIGINS, ...localDevOrigins];
     if (!origin || allAllowed.includes(origin) || origin.startsWith('exp://')) {
       callback(null, true);
     } else {
@@ -45,15 +49,15 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(morgan(env.IS_PRODUCTION ? 'combined' : 'dev'));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 if (!isServerless) {
   app.use('/uploads', express.static(uploadDir));
 }
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({
     success: true,
     message: 'API está funcionando',
@@ -74,19 +78,37 @@ app.use('/api/photos', photoRoutes);
 app.use('/api/meetings', meetingRoutes);
 
 // 404 handler
-app.use((req, res) => {
+app.use((_req, res) => {
   res.status(404).json({
     success: false,
     error: 'Rota não encontrada',
   });
 });
 
-// Error handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Erro:', err);
-  const status = err?.name === 'MulterError' ? 400 : err.status || 500;
-  res.status(status).json({
-    success: false,
-    error: err.message || 'Erro interno do servidor',
-  });
+// Centralized error handler
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  if (env.IS_PRODUCTION) {
+    console.error('Erro:', err.message);
+  } else {
+    console.error('Erro:', err);
+  }
+
+  if (err?.name === 'MulterError') {
+    res.status(400).json({ success: false, error: `Erro no upload: ${err.message}` });
+    return;
+  }
+
+  if (err?.name === 'ValidationError') {
+    res.status(400).json({ success: false, error: err.message });
+    return;
+  }
+
+  if (err?.name === 'CastError') {
+    res.status(400).json({ success: false, error: 'ID inválido' });
+    return;
+  }
+
+  const status = err.status || 500;
+  const message = env.IS_PRODUCTION ? 'Erro interno do servidor' : (err.message || 'Erro interno do servidor');
+  res.status(status).json({ success: false, error: message });
 });

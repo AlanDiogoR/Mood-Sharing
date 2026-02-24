@@ -93,13 +93,22 @@ export const LockScreen: React.FC<{onUnlock: () => void}> = ({onUnlock}) => {
     onUnlock();
   };
 
-  const handlePasswordUnlock = () => {
-    // In a real app, you would verify the password
-    // For now, we'll just unlock if password is not empty
-    if (password.length > 0) {
-      unlock();
-    } else {
+  const handlePasswordUnlock = async () => {
+    if (!password.trim()) {
       Alert.alert('Erro', 'Por favor, insira sua senha');
+      return;
+    }
+    try {
+      const {authService} = await import('../services/authService');
+      const response = await authService.verifyPassword(password);
+      if (response.success) {
+        await unlock();
+        setPassword('');
+      } else {
+        Alert.alert('Erro', 'Senha incorreta');
+      }
+    } catch {
+      Alert.alert('Erro', 'Não foi possível verificar a senha. Use a biometria.');
     }
   };
 

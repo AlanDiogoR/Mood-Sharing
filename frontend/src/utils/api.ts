@@ -1,10 +1,17 @@
-import axios, {AxiosInstance, AxiosError} from 'axios';
+import axios, {AxiosInstance, AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig} from 'axios';
 import {CONFIG} from '../constants/config';
 import {storage} from './storage';
 import {ApiResponse} from '../types';
 
+interface RetryableConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
+
+type OnAuthExpiredCallback = () => void;
+
 class ApiClient {
   private client: AxiosInstance;
+  private onAuthExpired: OnAuthExpiredCallback | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -16,6 +23,10 @@ class ApiClient {
     });
 
     this.setupInterceptors();
+  }
+
+  setOnAuthExpired(callback: OnAuthExpiredCallback): void {
+    this.onAuthExpired = callback;
   }
 
   private setupInterceptors(): void {
@@ -33,35 +44,38 @@ class ApiClient {
     this.client.interceptors.response.use(
       response => response,
       async (error: AxiosError) => {
-        const originalRequest = error.config as any;
+        const originalRequest = error.config as RetryableConfig;
 
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
           try {
             const refreshToken = await storage.getRefreshToken();
-            if (refreshToken) {
-              const response = await axios.post(`${CONFIG.API_BASE_URL}/auth/refresh`, {
-                refreshToken,
-              });
-
-              const tokenData = response.data?.data;
-              if (!tokenData?.accessToken) {
-                throw new Error('Invalid refresh response');
-              }
-              await storage.setTokens({
-                accessToken: tokenData.accessToken,
-                refreshToken: tokenData.refreshToken,
-                expiresIn: tokenData.expiresIn,
-              });
-              const accessToken = tokenData.accessToken;
-
-              originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-              return this.client(originalRequest);
+            if (!refreshToken) {
+              throw new Error('No refresh token');
             }
-          } catch (refreshError) {
+
+            const response = await axios.post(`${CONFIG.API_BASE_URL}/auth/refresh`, {
+              refreshToken,
+            });
+
+            const tokenData = response.data?.data;
+            if (!tokenData?.accessToken) {
+              throw new Error('Invalid refresh response');
+            }
+
+            await storage.setTokens({
+              accessToken: tokenData.accessToken,
+              refreshToken: tokenData.refreshToken,
+              expiresIn: tokenData.expiresIn,
+            });
+
+            originalRequest.headers.Authorization = `Bearer ${tokenData.accessToken}`;
+            return this.client(originalRequest);
+          } catch {
             await storage.clearAll();
-            return Promise.reject(refreshError);
+            this.onAuthExpired?.();
+            return Promise.reject(error);
           }
         }
 
@@ -70,7 +84,7 @@ class ApiClient {
     );
   }
 
-  async get<T>(url: string, config?: any): Promise<ApiResponse<T>> {
+  async get<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
       const response = await this.client.get(url, config);
       return response.data;
@@ -79,7 +93,7 @@ class ApiClient {
     }
   }
 
-  async post<T>(url: string, data?: any, config?: any): Promise<ApiResponse<T>> {
+  async post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
       const response = await this.client.post(url, data, config);
       return response.data;
@@ -88,7 +102,7 @@ class ApiClient {
     }
   }
 
-  async put<T>(url: string, data?: any, config?: any): Promise<ApiResponse<T>> {
+  async put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
       const response = await this.client.put(url, data, config);
       return response.data;
@@ -97,7 +111,7 @@ class ApiClient {
     }
   }
 
-  async delete<T>(url: string, config?: any): Promise<ApiResponse<T>> {
+  async delete<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
       const response = await this.client.delete(url, config);
       return response.data;
@@ -106,24 +120,25 @@ class ApiClient {
     }
   }
 
-  private handleError(error: any): ApiResponse<any> {
-    if (error.response) {
-      return {
-        success: false,
-        error: error.response.data?.error || error.response.data?.message || 'Erro desconhecido',
-        message: error.response.data?.message,
-      };
-    } else if (error.request) {
-      return {
-        success: false,
-        error: 'Sem resposta do servidor. Verifique sua conexão.',
-      };
-    } else {
-      return {
-        success: false,
-        error: error.message || 'Erro ao processar requisição',
-      };
+  private handleError<T>(error: unknown): ApiResponse<T> {
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        return {
+          success: false,
+          error: error.response.data?.error || error.response.data?.message || 'Erro desconhecido',
+          message: error.response.data?.message,
+        };
+      }
+      if (error.request) {
+        return {
+          success: false,
+          error: 'Sem resposta do servidor. Verifique sua conexão.',
+        };
+      }
     }
+
+    const message = error instanceof Error ? error.message : 'Erro ao processar requisição';
+    return { success: false, error: message };
   }
 }
 

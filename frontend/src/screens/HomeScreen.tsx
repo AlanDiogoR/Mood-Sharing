@@ -26,10 +26,14 @@ import {getAbsoluteUrl} from '../utils/url';
 import {storage} from '../utils/storage';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
+import {StackNavigationProp} from '@react-navigation/stack';
+import {RootStackParamList} from '../navigation/AppNavigator';
 import {useTheme} from '../store/themeContext';
 import {photoService} from '../services/photoService';
 import {meetingService} from '../services/meetingService';
 import {SharedPhoto, WeeklyMeetingSummary} from '../types';
+
+type HomeScreenNavProp = StackNavigationProp<RootStackParamList>;
 
 export const HomeScreen: React.FC = () => {
   const EXTRA_EMOTIONS = [
@@ -45,7 +49,7 @@ export const HomeScreen: React.FC = () => {
   const {currentMood, partnerMood, updateMood, refreshMoods, isLoading, isNearby, distance} =
     useMood();
   const {width} = useWindowDimensions();
-  const navigation = useNavigation();
+  const navigation = useNavigation<HomeScreenNavProp>();
   const insets = useSafeAreaInsets();
   const [selectedMood, setSelectedMood] = useState<MoodType | undefined>(currentMood?.type);
   const [message, setMessage] = useState('');
@@ -367,11 +371,11 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.headerLeft}>
           <TouchableOpacity
             onPress={() => {
-              if (user?.email?.toLowerCase() === 'alandiogor@gmail.com') {
-                navigation.navigate('SpecialArea' as never);
+              if (user?.role === 'admin') {
+                navigation.navigate('SpecialArea');
               }
             }}
-            activeOpacity={user?.email?.toLowerCase() === 'alandiogor@gmail.com' ? 0.7 : 1}>
+            activeOpacity={user?.role === 'admin' ? 0.7 : 1}>
             <Avatar uri={localPhotoUri || getAbsoluteUrl(user?.photoUrl)} size={56} />
           </TouchableOpacity>
           <View style={styles.headerText}>
@@ -381,7 +385,7 @@ export const HomeScreen: React.FC = () => {
                 {isUploadingPhoto ? 'Enviando...' : 'Atualizar foto'}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('EditProfile' as never)}>
+            <TouchableOpacity onPress={() => navigation.navigate('EditProfile')}>
               <Text style={[styles.photoLink, {color: colors.primary}]}>Editar perfil</Text>
             </TouchableOpacity>
           </View>
@@ -445,7 +449,7 @@ export const HomeScreen: React.FC = () => {
             <View style={styles.partnerPhotoHeader}>
               <Text style={styles.partnerPhotoTitle}>Foto enviada pelo parceiro</Text>
               <TouchableOpacity
-                onPress={() => navigation.navigate('PartnerPhotos' as never)}
+                onPress={() => navigation.navigate('PartnerPhotos')}
                 style={styles.partnerPhotoGalleryBtn}>
                 <Text style={[styles.partnerPhotoGalleryText, {color: colors.primary}]}>
                   Ver todas
@@ -455,7 +459,7 @@ export const HomeScreen: React.FC = () => {
             {partnerPhotoWithCache && !partnerPhotoError ? (
               <TouchableOpacity
                 activeOpacity={0.9}
-                onPress={() => navigation.navigate('PartnerPhotos' as never)}>
+                onPress={() => navigation.navigate('PartnerPhotos')}>
                 <Image
                   source={{uri: partnerPhotoWithCache}}
                   style={[styles.partnerPhoto, {height: partnerPhotoHeight}]}

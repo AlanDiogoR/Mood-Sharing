@@ -1,12 +1,15 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+export type UserRole = 'user' | 'admin';
+
 export interface IUser extends Document {
   email: string;
   password: string;
   name: string;
+  role: UserRole;
   partnerName?: string;
   partnerId?: mongoose.Types.ObjectId;
-  fcmToken?: string; // Token FCM ou Expo Push Token para notificações push
+  fcmToken?: string;
   photoUrl?: string;
   photoFilename?: string;
   photoUploadedAt?: Date;
@@ -30,6 +33,11 @@ const UserSchema = new Schema<IUser>(
       type: String,
       required: true,
       minlength: 6,
+    },
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user',
     },
     name: {
       type: String,
@@ -86,7 +94,7 @@ UserSchema.set('toJSON', {
   virtuals: true,
   versionKey: false,
   transform: (_doc, ret) => {
-    const { _id, ...rest } = ret;
+    const { _id, password, __v, ...rest } = ret;
     return { ...rest, id: _id };
   },
 });

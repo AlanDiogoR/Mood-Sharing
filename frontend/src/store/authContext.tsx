@@ -1,7 +1,8 @@
-import React, {createContext, useContext, useState, useEffect, ReactNode} from 'react';
+import React, {createContext, useContext, useState, useEffect, useCallback, ReactNode} from 'react';
 import {User, LoginCredentials, RegisterData} from '../types';
 import {authService} from '../services/authService';
 import {storage} from '../utils/storage';
+import {apiClient} from '../utils/api';
 
 interface AuthContextType {
   user: User | null;
@@ -31,9 +32,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadUser();
+  const handleAuthExpired = useCallback(() => {
+    setUser(null);
   }, []);
+
+  useEffect(() => {
+    apiClient.setOnAuthExpired(handleAuthExpired);
+    loadUser();
+  }, [handleAuthExpired]);
 
   const loadUser = async () => {
     try {

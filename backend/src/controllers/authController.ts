@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import mongoose from 'mongoose';
 import { User } from '../models/User';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken, TokenPayload } from '../utils/jwt';
+import { AuthRequest } from '../middleware/auth';
 import { body, validationResult } from 'express-validator';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -38,18 +40,26 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       name,
     });
 
-    // Se forneceu email do parceiro, tenta vincular
     if (partnerEmail) {
       const partner = await User.findOne({ email: partnerEmail.toLowerCase() });
       if (partner) {
-        user.partnerId = partner._id;
-        // Vincula bidirecionalmente
-        partner.partnerId = user._id;
-        await partner.save();
+        const session = await mongoose.startSession();
+        try {
+          await session.withTransaction(async () => {
+            user.partnerId = partner._id;
+            partner.partnerId = user._id;
+            await user.save({ session });
+            await partner.save({ session });
+          });
+        } finally {
+          await session.endSession();
+        }
+      } else {
+        await user.save();
       }
+    } else {
+      await user.save();
     }
-
-    await user.save();
 
     // Gera tokens
     const tokenPayload: TokenPayload = {
@@ -164,7 +174,12 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
     try {
       const decoded = verifyRefreshToken(refreshToken);
 
-      // Gera novos tokens
+      const userExists = await User.exists({ _id: decoded.userId });
+      if (!userExists) {
+        res.status(401).json({ success: false, error: 'Usuário não encontrado' });
+        return;
+      }
+
       const tokenPayload: TokenPayload = {
         userId: decoded.userId,
         email: decoded.email,
@@ -196,9 +211,9 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const getCurrentUser = async (req: Request, res: Response): Promise<void> => {
+export const getCurrentUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     if (!userId) {
       res.status(401).json({
@@ -230,9 +245,10 @@ export const getCurrentUser = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export const linkPartner = async (req: Request, res: Response): Promise<void> => {
+export const linkPartner = async (req: AuthRequest, res: Response): Promise<void> => {
+  const session = await mongoose.startSession();
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { partnerEmail } = req.body;
 
     if (!partnerEmail) {
@@ -261,12 +277,20 @@ export const linkPartner = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    // Vincula bidirecionalmente
-    user.partnerId = partner._id;
-    partner.partnerId = user._id;
+    if (partner._id.toString() === userId) {
+      res.status(400).json({
+        success: false,
+        error: 'Você não pode se vincular a si mesmo',
+      });
+      return;
+    }
 
-    await user.save();
-    await partner.save();
+    await session.withTransaction(async () => {
+      user.partnerId = partner._id;
+      partner.partnerId = user._id;
+      await user.save({ session });
+      await partner.save({ session });
+    });
 
     const { password: _password, ...userResponse } = user.toJSON();
 
@@ -280,12 +304,14 @@ export const linkPartner = async (req: Request, res: Response): Promise<void> =>
       success: false,
       error: 'Erro ao vincular parceiro',
     });
+  } finally {
+    await session.endSession();
   }
 };
 
-export const updateFcmToken = async (req: Request, res: Response): Promise<void> => {
+export const updateFcmToken = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { fcmToken } = req.body;
 
     if (!fcmToken) {
@@ -323,7 +349,40 @@ export const updateFcmToken = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export const changePassword = async (req: Request, res: Response): Promise<void> => {
+export const verifyPassword = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, error: 'Usuário não autenticado' });
+      return;
+    }
+
+    const { password } = req.body;
+    if (!password) {
+      res.status(400).json({ success: false, error: 'Senha não fornecida' });
+      return;
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+      return;
+    }
+
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      res.status(401).json({ success: false, error: 'Senha incorreta' });
+      return;
+    }
+
+    res.json({ success: true, message: 'Senha verificada' });
+  } catch (error: any) {
+    console.error('Erro ao verificar senha:', error);
+    res.status(500).json({ success: false, error: 'Erro ao verificar senha' });
+  }
+};
+
+export const changePassword = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -331,7 +390,7 @@ export const changePassword = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ success: false, error: 'Usuário não autenticado' });
       return;

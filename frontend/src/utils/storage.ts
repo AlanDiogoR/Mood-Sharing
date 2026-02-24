@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {AuthTokens} from '../types';
+import {AuthTokens, User} from '../types';
 
 const STORAGE_KEYS = {
   ACCESS_TOKEN: '@mood_app:access_token',
@@ -36,11 +36,11 @@ export const storage = {
     ]);
   },
 
-  async setUserData(userData: any): Promise<void> {
+  async setUserData(userData: User): Promise<void> {
     await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
   },
 
-  async getUserData(): Promise<any | null> {
+  async getUserData(): Promise<User | null> {
     const data = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
     return data ? JSON.parse(data) : null;
   },

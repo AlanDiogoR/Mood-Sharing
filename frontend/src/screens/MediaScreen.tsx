@@ -16,12 +16,16 @@ import { MediaItem, MediaType } from '../types';
 import { mediaService } from '../services/mediaService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { useTheme } from '../store/themeContext';
 import { Ionicons } from '@expo/vector-icons';
 
+type MediaScreenNavProp = StackNavigationProp<RootStackParamList>;
+
 export const MediaScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
+  const navigation = useNavigation<MediaScreenNavProp>();
   const { colors } = useTheme();
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -71,11 +75,11 @@ export const MediaScreen: React.FC = () => {
   );
 
   const handleStartCreate = () => {
-    navigation.navigate('MediaForm' as never, { mode: 'create' } as never);
+    navigation.navigate('MediaForm');
   };
 
-  const handleEdit = (item: MediaItem) => {
-    navigation.navigate('MediaForm' as never, { mode: 'edit', item } as never);
+  const handleEdit = (_item: MediaItem) => {
+    navigation.navigate('MediaForm');
   };
 
   const handleOpenReview = (item: MediaItem) => {

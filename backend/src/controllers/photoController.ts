@@ -1,12 +1,13 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import path from 'path';
 import crypto from 'crypto';
 import { getStore } from '@netlify/blobs';
 import { SharedPhoto } from '../models/SharedPhoto';
 import { User } from '../models/User';
 import { isServerless, uploadDir } from '../config/uploads';
-import { sendMoodChangeNotification as sendExpoNotification, isExpoPushToken } from '../services/expoPushService';
+import { sendGenericNotification as sendExpoNotification, isExpoPushToken } from '../services/expoPushService';
 import { sendToMultipleTokens as sendFcmMulti } from '../services/firebaseAdmin';
+import { AuthRequest } from '../middleware/auth';
 
 const getSharedPhotoStore = () => {
   const siteID = process.env.NETLIFY_BLOBS_SITE_ID || process.env.NETLIFY_SITE_ID;
@@ -20,13 +21,13 @@ const getSharedPhotoStore = () => {
 
   if (siteID && token) {
     return getStore({
-      name: 'user-photos',
+      name: 'shared-photos',
       siteID,
       token,
     });
   }
 
-  return getStore('user-photos');
+  return getStore('shared-photos');
 };
 
 const getExtensionFromMime = (mimeType?: string): string => {
@@ -46,9 +47,9 @@ const getPairKey = (userId: string, partnerId: string): string => {
   return `${sorted[0]}:${sorted[1]}`;
 };
 
-export const uploadSharedPhoto = async (req: Request, res: Response): Promise<void> => {
+export const uploadSharedPhoto = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ success: false, error: 'Usuário não autenticado' });
       return;
@@ -116,26 +117,14 @@ export const uploadSharedPhoto = async (req: Request, res: Response): Promise<vo
       const senderName = sender?.name || 'Seu parceiro';
 
       if (partner?.fcmToken) {
+        const title = '📸 Nova foto recebida!';
+        const body = `${senderName} enviou uma foto para você`;
         if (isExpoPushToken(partner.fcmToken)) {
-          const { Expo, ExpoPushMessage } = require('expo-server-sdk');
-          const expo = new Expo();
-          const messages: typeof ExpoPushMessage[] = [{
-            to: partner.fcmToken,
-            sound: 'default',
-            title: '📸 Nova foto recebida!',
-            body: `${senderName} enviou uma foto para você`,
-            data: { type: 'new_photo', senderId: userId },
-            priority: 'high',
-            channelId: 'mood_sharing_channel',
-          }];
-          const chunks = expo.chunkPushNotifications(messages);
-          for (const chunk of chunks) {
-            await expo.sendPushNotificationsAsync(chunk);
-          }
+          await sendExpoNotification(partner.fcmToken, title, body);
         } else {
           await sendFcmMulti(
             [partner.fcmToken],
-            { title: '📸 Nova foto recebida!', body: `${senderName} enviou uma foto para você` },
+            { title, body },
             { type: 'new_photo', senderId: userId }
           );
         }
@@ -156,9 +145,9 @@ export const uploadSharedPhoto = async (req: Request, res: Response): Promise<vo
   }
 };
 
-export const getLatestPartnerPhoto = async (req: Request, res: Response): Promise<void> => {
+export const getLatestPartnerPhoto = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ success: false, error: 'Usuário não autenticado' });
       return;
@@ -186,9 +175,9 @@ export const getLatestPartnerPhoto = async (req: Request, res: Response): Promis
   }
 };
 
-export const getPartnerPhotos = async (req: Request, res: Response): Promise<void> => {
+export const getPartnerPhotos = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ success: false, error: 'Usuário não autenticado' });
       return;
@@ -216,13 +205,15 @@ export const getPartnerPhotos = async (req: Request, res: Response): Promise<voi
 
     res.json({
       success: true,
-      data: photos,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-        hasMore: skip + photos.length < total,
+      data: {
+        photos,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasMore: skip + photos.length < total,
+        },
       },
     });
   } catch (error: any) {

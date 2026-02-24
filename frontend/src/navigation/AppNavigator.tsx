@@ -15,8 +15,24 @@ import {EditProfileScreen} from '../screens/EditProfileScreen';
 import {PartnerPhotosScreen} from '../screens/PartnerPhotosScreen';
 import {COLORS} from '../constants/colors';
 
-const Stack = createStackNavigator();
-const Tab = createBottomTabNavigator();
+export type RootStackParamList = {
+  Login: undefined;
+  MainTabs: undefined;
+  MediaForm: {mediaId?: string} | undefined;
+  SpecialArea: undefined;
+  EditProfile: undefined;
+  PartnerPhotos: undefined;
+};
+
+export type MainTabParamList = {
+  Home: undefined;
+  Media: undefined;
+  CompletedMedia: undefined;
+  Notes: undefined;
+};
+
+const Stack = createStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const MainTabs: React.FC = () => {
   const {colors} = useTheme();

@@ -61,6 +61,10 @@ export const authService = {
     return await apiClient.post<User>('/auth/link-partner', {partnerEmail});
   },
 
+  async verifyPassword(password: string): Promise<ApiResponse<{ message: string }>> {
+    return await apiClient.post<{ message: string }>('/auth/verify-password', { password });
+  },
+
   async changePassword(currentPassword: string, newPassword: string): Promise<ApiResponse<{ message: string }>> {
     return await apiClient.post<{ message: string }>('/auth/change-password', {
       currentPassword,

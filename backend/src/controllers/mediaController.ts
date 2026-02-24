@@ -1,11 +1,11 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
-import mongoose from 'mongoose';
+import mongoose, { SortOrder } from 'mongoose';
 import { MediaItem } from '../models/MediaItem';
-import { SortOrder } from 'mongoose';
 import { User } from '../models/User';
+import { AuthRequest } from '../middleware/auth';
 
-const getUserId = (req: Request): string | undefined => (req as any).user?.userId;
+const getUserId = (req: AuthRequest): string | undefined => req.user?.userId;
 
 const getPairKey = (userId: string, partnerId: string): string => {
   const sorted = [userId, partnerId].sort();
@@ -55,7 +55,7 @@ export const validateReorderMedia = [
   body('orderedIds.*').isMongoId().withMessage('IDs inválidos'),
 ];
 
-export const createMedia = async (req: Request, res: Response): Promise<void> => {
+export const createMedia = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -98,7 +98,7 @@ export const createMedia = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-export const listMedia = async (req: Request, res: Response): Promise<void> => {
+export const listMedia = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = getUserId(req);
     if (!userId) {
@@ -124,7 +124,7 @@ export const listMedia = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const getMedia = async (req: Request, res: Response): Promise<void> => {
+export const getMedia = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -153,7 +153,7 @@ export const getMedia = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const updateMedia = async (req: Request, res: Response): Promise<void> => {
+export const updateMedia = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -169,9 +169,19 @@ export const updateMedia = async (req: Request, res: Response): Promise<void> =>
 
     const pairKey = await getUserPairKey(userId);
     await ensurePairKey(userId, pairKey);
+
+    const { title, type, notes, rating, review, completed } = req.body;
+    const updates: Record<string, any> = {};
+    if (title !== undefined) updates.title = title;
+    if (type !== undefined) updates.type = type;
+    if (notes !== undefined) updates.notes = notes;
+    if (rating !== undefined) updates.rating = rating;
+    if (review !== undefined) updates.review = review;
+    if (completed !== undefined) updates.completed = completed;
+
     const item = await MediaItem.findOneAndUpdate(
       { _id: req.params.id, pairKey },
-      { $set: req.body },
+      { $set: updates },
       { new: true }
     );
 
@@ -187,7 +197,7 @@ export const updateMedia = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-export const deleteMedia = async (req: Request, res: Response): Promise<void> => {
+export const deleteMedia = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -216,7 +226,7 @@ export const deleteMedia = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-export const reorderMedia = async (req: Request, res: Response): Promise<void> => {
+export const reorderMedia = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

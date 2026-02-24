@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { Mood, MoodType, ILocation } from '../models/Mood';
 import { User } from '../models/User';
 import { CoupleDaySummary } from '../models/CoupleDaySummary';
@@ -6,6 +6,7 @@ import { getMoodEmoji } from '../utils/moodEmojis';
 import { calculateDistance, isWithinProximity } from '../utils/distance';
 import { sendMoodChangeNotification as sendExpoMoodChangeNotification, sendProximityNotification as sendExpoProximityNotification, isExpoPushToken } from '../services/expoPushService';
 import { sendMoodChangeNotification as sendFcmMoodChangeNotification, sendProximityNotification as sendFcmProximityNotification } from '../services/firebaseAdmin';
+import { AuthRequest } from '../middleware/auth';
 
 const PROXIMITY_THRESHOLD_KM = 1.0;
 const MAX_MEETING_GAP_MINUTES = 30;
@@ -56,10 +57,10 @@ const recordCoupleMeeting = async (
   await summary.save();
 };
 
-export const getCurrentMood = async (req: Request, res: Response): Promise<void> => {
+export const getCurrentMood = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.params.userId;
-    const currentUserId = (req as any).user?.userId;
+    const currentUserId = req.user?.userId;
 
     // Só pode ver o próprio mood ou do parceiro
     if (userId !== currentUserId) {
@@ -96,10 +97,10 @@ export const getCurrentMood = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export const getPartnerMood = async (req: Request, res: Response): Promise<void> => {
+export const getPartnerMood = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const partnerId = req.params.partnerId;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     // Verifica se é o parceiro
     const user = await User.findById(userId);
@@ -134,9 +135,9 @@ export const getPartnerMood = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export const updateMood = async (req: Request, res: Response): Promise<void> => {
+export const updateMood = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { type, message, location, extraEmoji, extraLabel } = req.body;
 
     if (!type || !Object.values(MoodType).includes(type)) {
@@ -209,10 +210,10 @@ export const updateMood = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-export const updateMoodWithProximity = async (req: Request, res: Response): Promise<void> => {
+export const updateMoodWithProximity = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.userId;
-    const { type, location, partnerLocation, extraEmoji, extraLabel } = req.body;
+    const userId = req.user?.userId;
+    const { type, location, extraEmoji, extraLabel } = req.body;
 
     if (!type || !Object.values(MoodType).includes(type)) {
       res.status(400).json({
@@ -222,16 +223,23 @@ export const updateMoodWithProximity = async (req: Request, res: Response): Prom
       return;
     }
 
-    if (!location || !partnerLocation) {
+    if (!location) {
       res.status(400).json({
         success: false,
-        error: 'Localizações não fornecidas',
+        error: 'Localização não fornecida',
       });
       return;
     }
 
-    // Verifica proximidade
-    const nearby = isWithinProximity(location, partnerLocation, PROXIMITY_THRESHOLD_KM);
+    const user = await User.findById(userId).select('partnerId name');
+    const partnerMood = user?.partnerId
+      ? await Mood.findOne({ userId: user.partnerId }).select('location')
+      : null;
+    const partnerLocation = partnerMood?.location;
+
+    const nearby = partnerLocation
+      ? isWithinProximity(location, partnerLocation, PROXIMITY_THRESHOLD_KM)
+      : false;
 
     // Se estiverem próximos, força ambos para "happy"
     const finalType = nearby ? MoodType.HAPPY : (type as MoodType);
@@ -253,45 +261,38 @@ export const updateMoodWithProximity = async (req: Request, res: Response): Prom
       }
     );
 
-    // Se estiverem próximos, atualiza o parceiro também
-    if (nearby) {
-      const user = await User.findById(userId);
-      if (user?.partnerId) {
-        try {
-          await recordCoupleMeeting(userId, user.partnerId.toString(), new Date());
-        } catch (meetingError) {
-          console.error('Erro ao registrar encontro do casal:', meetingError);
+    if (nearby && user?.partnerId) {
+      try {
+        await recordCoupleMeeting(userId, user.partnerId.toString(), new Date());
+      } catch (meetingError) {
+        console.error('Erro ao registrar encontro do casal:', meetingError);
+      }
+      await Mood.findOneAndUpdate(
+        { userId: user.partnerId },
+        {
+          type: MoodType.HAPPY,
+          emoji: getMoodEmoji(MoodType.HAPPY),
+          extraEmoji: null,
+          extraLabel: null,
+          location: partnerLocation,
+        },
+        {
+          new: true,
+          upsert: true,
         }
-        await Mood.findOneAndUpdate(
-          { userId: user.partnerId },
-          {
-            type: MoodType.HAPPY,
-            emoji: getMoodEmoji(MoodType.HAPPY),
-            extraEmoji: null,
-            extraLabel: null,
-            location: partnerLocation,
-          },
-          {
-            new: true,
-            upsert: true,
-          }
-        );
+      );
 
-        // Envia notificação de proximidade
-        try {
-          const partner = await User.findById(user.partnerId);
-          if (partner?.fcmToken) {
-            // Verifica se é um token Expo ou FCM e usa o serviço apropriado
-            if (isExpoPushToken(partner.fcmToken)) {
-              await sendExpoProximityNotification(partner.fcmToken, user.name);
-            } else {
-              // Token FCM - usa Firebase Admin
-              await sendFcmProximityNotification(partner.fcmToken, user.name);
-            }
+      try {
+        const partner = await User.findById(user.partnerId).select('fcmToken');
+        if (partner?.fcmToken) {
+          if (isExpoPushToken(partner.fcmToken)) {
+            await sendExpoProximityNotification(partner.fcmToken, user.name);
+          } else {
+            await sendFcmProximityNotification(partner.fcmToken, user.name);
           }
-        } catch (notificationError) {
-          console.error('Erro ao enviar notificação de proximidade:', notificationError);
         }
+      } catch (notificationError) {
+        console.error('Erro ao enviar notificação de proximidade:', notificationError);
       }
     }
 
@@ -309,10 +310,10 @@ export const updateMoodWithProximity = async (req: Request, res: Response): Prom
   }
 };
 
-export const getMoodHistory = async (req: Request, res: Response): Promise<void> => {
+export const getMoodHistory = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.params.userId;
-    const currentUserId = (req as any).user?.userId;
+    const currentUserId = req.user?.userId;
     const limit = parseInt(req.query.limit as string) || 10;
 
     // Só pode ver o próprio histórico ou do parceiro

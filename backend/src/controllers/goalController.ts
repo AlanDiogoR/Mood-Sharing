@@ -1,8 +1,9 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { GoalList } from '../models/Goal';
+import { AuthRequest } from '../middleware/auth';
 
-const getUserId = (req: Request): string | undefined => (req as any).user?.userId;
+const getUserId = (req: AuthRequest): string | undefined => req.user?.userId;
 
 export const validateUpdateGoals = [
   body('items').isArray().withMessage('Items inválidos'),
@@ -12,7 +13,7 @@ export const validateUpdateGoals = [
   body('items.*.completed').isBoolean().withMessage('Status inválido'),
 ];
 
-export const getGoals = async (req: Request, res: Response): Promise<void> => {
+export const getGoals = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = getUserId(req);
     if (!userId) {
@@ -28,7 +29,7 @@ export const getGoals = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const updateGoals = async (req: Request, res: Response): Promise<void> => {
+export const updateGoals = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

@@ -1,12 +1,13 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
 import { WorkoutSummary } from '../models/WorkoutSummary';
 import { CoupleDaySummary } from '../models/CoupleDaySummary';
 import { User } from '../models/User';
+import { AuthRequest } from '../middleware/auth';
 
 const ACTIVE_WINDOW_MINUTES = 90;
 
-const getUserId = (req: Request): string | undefined => (req as any).user?.userId;
+const getUserId = (req: AuthRequest): string | undefined => req.user?.userId;
 
 const getDateKey = (date = new Date()): string => {
   const year = date.getFullYear();
@@ -36,7 +37,7 @@ export const validateSaveWorkout = [
   body('completedAt').isNumeric().withMessage('Data de conclusão inválida'),
 ];
 
-export const saveWorkoutSummary = async (req: Request, res: Response): Promise<void> => {
+export const saveWorkoutSummary = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -90,7 +91,7 @@ export const validateWeeklySummary = [
   query('start').optional().isISO8601().withMessage('Data inicial inválida'),
 ];
 
-export const getWeeklySummary = async (req: Request, res: Response): Promise<void> => {
+export const getWeeklySummary = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

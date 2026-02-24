@@ -30,7 +30,7 @@ Crie um arquivo `.env` na pasta `backend`:
 
 ```env
 PORT=3000
-MONGODB_URI=mongodb+srv://alandiogor_db_user:vEdWjEc6o4GmghTp@cluster0.nvlz1pz.mongodb.net/mood_sharing_db?retryWrites=true&w=majority
+MONGODB_URI=sua string de conexão 
 JWT_SECRET=sua-chave-secreta-super-segura-aqui
 JWT_REFRESH_SECRET=sua-chave-secreta-refresh-aqui
 JWT_EXPIRES_IN=1h

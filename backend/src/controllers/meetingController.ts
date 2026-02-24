@@ -1,7 +1,8 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { validationResult, query } from 'express-validator';
 import { CoupleDaySummary } from '../models/CoupleDaySummary';
 import { User } from '../models/User';
+import { AuthRequest } from '../middleware/auth';
 
 const MAX_GAP_MINUTES = 30;
 
@@ -30,9 +31,9 @@ export const validateWeeklyMeetings = [
   query('start').optional().isISO8601().withMessage('Data inicial inválida'),
 ];
 
-export const recordProximity = async (req: Request, res: Response): Promise<void> => {
+export const recordProximity = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ success: false, error: 'Usuário não autenticado' });
       return;
@@ -88,7 +89,7 @@ export const recordProximity = async (req: Request, res: Response): Promise<void
   }
 };
 
-export const getWeeklyMeetings = async (req: Request, res: Response): Promise<void> => {
+export const getWeeklyMeetings = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -96,7 +97,7 @@ export const getWeeklyMeetings = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ success: false, error: 'Usuário não autenticado' });
       return;
