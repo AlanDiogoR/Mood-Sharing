@@ -55,6 +55,7 @@ export const HomeScreen: React.FC = () => {
   const [partnerSharedPhoto, setPartnerSharedPhoto] = useState<SharedPhoto | null>(null);
   const [isLoadingPartnerPhoto, setIsLoadingPartnerPhoto] = useState(false);
   const [isUploadingPartnerPhoto, setIsUploadingPartnerPhoto] = useState(false);
+  const [partnerPhotoError, setPartnerPhotoError] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [extraEmotion, setExtraEmotion] = useState<{emoji: string; label: string} | null>(null);
   const [isExtraModalVisible, setIsExtraModalVisible] = useState(false);
@@ -133,6 +134,13 @@ export const HomeScreen: React.FC = () => {
     }
     loadPartnerPhoto();
     loadMeetingSummary();
+
+    // Polling a cada 30s para detectar novas fotos enviadas pelo parceiro
+    const pollingInterval = setInterval(() => {
+      loadPartnerPhoto();
+    }, 30_000);
+
+    return () => clearInterval(pollingInterval);
   }, [user?.partnerId]);
 
   const loadPartnerPhoto = async () => {
@@ -141,6 +149,7 @@ export const HomeScreen: React.FC = () => {
       const response = await photoService.getLatestFromPartner();
       if (response.success) {
         setPartnerSharedPhoto(response.data ?? null);
+        setPartnerPhotoError(false);
       }
     } catch (error) {
       console.error('Error loading partner photo:', error);
@@ -433,15 +442,35 @@ export const HomeScreen: React.FC = () => {
         )}
         {user?.partnerId && (
           <View style={styles.partnerPhotoSection}>
-            <Text style={styles.partnerPhotoTitle}>Foto enviada pelo parceiro</Text>
-            {partnerPhotoWithCache ? (
-              <Image
-                source={{uri: partnerPhotoWithCache}}
-                style={[styles.partnerPhoto, {height: partnerPhotoHeight}]}
-              />
+            <View style={styles.partnerPhotoHeader}>
+              <Text style={styles.partnerPhotoTitle}>Foto enviada pelo parceiro</Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('PartnerPhotos' as never)}
+                style={styles.partnerPhotoGalleryBtn}>
+                <Text style={[styles.partnerPhotoGalleryText, {color: colors.primary}]}>
+                  Ver todas
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {partnerPhotoWithCache && !partnerPhotoError ? (
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => navigation.navigate('PartnerPhotos' as never)}>
+                <Image
+                  source={{uri: partnerPhotoWithCache}}
+                  style={[styles.partnerPhoto, {height: partnerPhotoHeight}]}
+                  resizeMode="cover"
+                  onError={() => setPartnerPhotoError(true)}
+                  onLoad={() => setPartnerPhotoError(false)}
+                />
+              </TouchableOpacity>
             ) : (
               <Text style={styles.partnerPhotoEmpty}>
-                {isLoadingPartnerPhoto ? 'Carregando foto...' : 'Nenhuma foto recebida ainda.'}
+                {isLoadingPartnerPhoto
+                  ? 'Carregando foto...'
+                  : partnerPhotoError
+                    ? 'Erro ao carregar foto. Puxe para atualizar.'
+                    : 'Nenhuma foto recebida ainda.'}
               </Text>
             )}
             <Button
@@ -752,11 +781,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+  partnerPhotoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
   partnerPhotoTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.text,
-    marginBottom: 12,
+  },
+  partnerPhotoGalleryBtn: {
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+  },
+  partnerPhotoGalleryText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   partnerPhoto: {
     width: '100%',

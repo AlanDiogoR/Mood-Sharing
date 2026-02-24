@@ -39,21 +39,12 @@ export const LoginScreen: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/8bb25667-25ae-441d-ae7c-2d3a6dd7c850',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LoginScreen.tsx:41',message:'handleSubmit called',data:{isLoginMode,email,hasPassword:!!password},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
     if (!validateForm()) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/8bb25667-25ae-441d-ae7c-2d3a6dd7c850',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LoginScreen.tsx:43',message:'form validation failed',data:{errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
       return;
     }
 
     try {
       if (isLoginMode) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/8bb25667-25ae-441d-ae7c-2d3a6dd7c850',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LoginScreen.tsx:48',message:'calling login',data:{email},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
         await login({email, password});
       } else {
         await register({
@@ -64,9 +55,6 @@ export const LoginScreen: React.FC = () => {
         });
       }
     } catch (error: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/8bb25667-25ae-441d-ae7c-2d3a6dd7c850',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LoginScreen.tsx:58',message:'handleSubmit error',data:{errorMessage:error?.message,errorType:error?.constructor?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       setErrors({submit: error.message || 'Erro ao autenticar'});
     }
   };

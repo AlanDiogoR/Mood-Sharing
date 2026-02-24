@@ -4,14 +4,8 @@ import {LoginCredentials, RegisterData, User, AuthTokens, ApiResponse} from '../
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<ApiResponse<{user: User; tokens: AuthTokens}>> {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/8bb25667-25ae-441d-ae7c-2d3a6dd7c850',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authService.ts:6',message:'login called',data:{email:credentials.email,hasPassword:!!credentials.password},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
     const response = await apiClient.post<{user: User; tokens: AuthTokens}>('/auth/login', credentials);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/8bb25667-25ae-441d-ae7c-2d3a6dd7c850',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authService.ts:8',message:'login response received',data:{success:response.success,hasData:!!response.data,error:response.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
-    
+
     if (response.success && response.data) {
       await storage.setTokens(response.data.tokens);
       await storage.setUserData(response.data.user);

@@ -12,6 +12,7 @@ import {NotesScreen} from '../screens/NotesScreen';
 import {MediaFormScreen} from '../screens/MediaFormScreen';
 import {SpecialAreaScreen} from '../screens/SpecialAreaScreen';
 import {EditProfileScreen} from '../screens/EditProfileScreen';
+import {PartnerPhotosScreen} from '../screens/PartnerPhotosScreen';
 import {COLORS} from '../constants/colors';
 
 const Stack = createStackNavigator();
@@ -135,6 +136,11 @@ const AppNavigator: React.FC = () => {
             name="EditProfile"
             component={EditProfileScreen}
             options={{title: 'Editar perfil'}}
+          />
+          <Stack.Screen
+            name="PartnerPhotos"
+            component={PartnerPhotosScreen}
+            options={{headerShown: false}}
           />
         </>
       )}

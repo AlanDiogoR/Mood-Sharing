@@ -120,6 +120,9 @@ export const MediaFormScreen: React.FC = () => {
             placeholderTextColor={COLORS.textMuted}
             value={title}
             onChangeText={setTitle}
+            selectionColor={colors.primary}
+            autoComplete="off"
+            importantForAutofill="no"
           />
           <TextInput
             style={[styles.input, styles.notesInput]}
@@ -128,6 +131,9 @@ export const MediaFormScreen: React.FC = () => {
             value={notes}
             onChangeText={setNotes}
             multiline
+            selectionColor={colors.primary}
+            autoComplete="off"
+            importantForAutofill="no"
           />
 
           <View style={styles.formActions}>
@@ -195,7 +201,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   typeChipTextActive: {
-    color: COLORS.background,
+    color: '#ffffff',
   },
   input: {
     backgroundColor: COLORS.background,
@@ -223,7 +229,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryButtonText: {
-    color: COLORS.background,
+    color: '#ffffff',
     fontWeight: '700',
   },
   secondaryButton: {

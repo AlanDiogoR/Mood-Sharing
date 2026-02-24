@@ -5,6 +5,8 @@ import { getStore } from '@netlify/blobs';
 import { SharedPhoto } from '../models/SharedPhoto';
 import { User } from '../models/User';
 import { isServerless, uploadDir } from '../config/uploads';
+import { sendMoodChangeNotification as sendExpoNotification, isExpoPushToken } from '../services/expoPushService';
+import { sendToMultipleTokens as sendFcmMulti } from '../services/firebaseAdmin';
 
 const getSharedPhotoStore = () => {
   const siteID = process.env.NETLIFY_BLOBS_SITE_ID || process.env.NETLIFY_SITE_ID;
@@ -107,6 +109,41 @@ export const uploadSharedPhoto = async (req: Request, res: Response): Promise<vo
       photoFilename: filename,
     });
 
+    // Notify the partner about the new photo
+    try {
+      const sender = await User.findById(userId).select('name');
+      const partner = await User.findById(partnerId).select('fcmToken');
+      const senderName = sender?.name || 'Seu parceiro';
+
+      if (partner?.fcmToken) {
+        if (isExpoPushToken(partner.fcmToken)) {
+          const { Expo, ExpoPushMessage } = require('expo-server-sdk');
+          const expo = new Expo();
+          const messages: typeof ExpoPushMessage[] = [{
+            to: partner.fcmToken,
+            sound: 'default',
+            title: '📸 Nova foto recebida!',
+            body: `${senderName} enviou uma foto para você`,
+            data: { type: 'new_photo', senderId: userId },
+            priority: 'high',
+            channelId: 'mood_sharing_channel',
+          }];
+          const chunks = expo.chunkPushNotifications(messages);
+          for (const chunk of chunks) {
+            await expo.sendPushNotificationsAsync(chunk);
+          }
+        } else {
+          await sendFcmMulti(
+            [partner.fcmToken],
+            { title: '📸 Nova foto recebida!', body: `${senderName} enviou uma foto para você` },
+            { type: 'new_photo', senderId: userId }
+          );
+        }
+      }
+    } catch (notifError) {
+      console.error('Erro ao notificar parceiro sobre foto:', notifError);
+    }
+
     res.json({
       success: true,
       data: sharedPhoto,
@@ -146,5 +183,50 @@ export const getLatestPartnerPhoto = async (req: Request, res: Response): Promis
   } catch (error: any) {
     console.error('Erro ao buscar foto do parceiro:', error);
     res.status(500).json({ success: false, error: 'Erro ao buscar foto do parceiro' });
+  }
+};
+
+export const getPartnerPhotos = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, error: 'Usuário não autenticado' });
+      return;
+    }
+
+    const user = await User.findById(userId).select('partnerId');
+    if (!user?.partnerId) {
+      res.json({ success: true, data: [] });
+      return;
+    }
+
+    const page = Math.max(1, parseInt(String(req.query.page ?? '1'), 10));
+    const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit ?? '20'), 10)));
+    const skip = (page - 1) * limit;
+
+    const pairKey = getPairKey(userId, user.partnerId.toString());
+
+    const [photos, total] = await Promise.all([
+      SharedPhoto.find({ pairKey, receiverId: userId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      SharedPhoto.countDocuments({ pairKey, receiverId: userId }),
+    ]);
+
+    res.json({
+      success: true,
+      data: photos,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: skip + photos.length < total,
+      },
+    });
+  } catch (error: any) {
+    console.error('Erro ao buscar galeria de fotos do parceiro:', error);
+    res.status(500).json({ success: false, error: 'Erro ao buscar fotos do parceiro' });
   }
 };

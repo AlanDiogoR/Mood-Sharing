@@ -20,7 +20,7 @@ const getEnvVar = (key: string, defaultValue: string = ''): string => {
     const hardcodedValues: Record<string, string> = {
       API_BASE_URL: 'https://moodsharin.netlify.app/api',
       MONGODB_URI: 'mongodb+srv://alandiogor_db_user:vEdWjEc6o4GmghTp@cluster0.nvlz1pz.mongodb.net/?appName=Cluster0',
-      EXPO_PROJECT_ID: 'your-expo-project-id',
+      EXPO_PROJECT_ID: 'd4ce3370-dfaa-41c0-a794-12df28a9fc91',
     };
 
     if (hardcodedValues[key]) {
@@ -34,10 +34,7 @@ const getEnvVar = (key: string, defaultValue: string = ''): string => {
   }
 };
 
-// #region agent log
 const apiBaseUrl = getEnvVar('API_BASE_URL', 'https://moodsharin.netlify.app/api');
-fetch('http://127.0.0.1:7242/ingest/8bb25667-25ae-441d-ae7c-2d3a6dd7c850', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'config.ts:39', message: 'API_BASE_URL resolved', data: { apiBaseUrl, envVar: process.env?.API_BASE_URL }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-// #endregion
 
 export const CONFIG = {
   // API Configuration
@@ -62,5 +59,5 @@ export const CONFIG = {
   // Notifications
   NOTIFICATION_CHANNEL_ID: 'mood_sharing_channel',
   NOTIFICATION_CHANNEL_NAME: 'Mood Sharing Notifications',
-  EXPO_PROJECT_ID: getEnvVar('EXPO_PROJECT_ID', 'your-expo-project-id'),
+  EXPO_PROJECT_ID: getEnvVar('EXPO_PROJECT_ID', 'd4ce3370-dfaa-41c0-a794-12df28a9fc91'),
 };
