@@ -58,7 +58,7 @@ export const PartnerPhotosScreen: React.FC = () => {
       if (!isMounted.current) return;
 
       if (response.success && response.data) {
-        const newPhotos = response.data.data;
+        const newPhotos = response.data.photos;
         setPhotos(prev => (replace ? newPhotos : [...prev, ...newPhotos]));
         setHasMore(response.data.pagination.hasMore);
         setPage(pageNum);

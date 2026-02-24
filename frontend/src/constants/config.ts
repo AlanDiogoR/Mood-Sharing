@@ -19,7 +19,6 @@ const getEnvVar = (key: string, defaultValue: string = ''): string => {
     // Estes valores devem corresponder ao app.json
     const hardcodedValues: Record<string, string> = {
       API_BASE_URL: 'https://moodsharin.netlify.app/api',
-      MONGODB_URI: 'mongodb+srv://alandiogor_db_user:vEdWjEc6o4GmghTp@cluster0.nvlz1pz.mongodb.net/?appName=Cluster0',
       EXPO_PROJECT_ID: 'd4ce3370-dfaa-41c0-a794-12df28a9fc91',
     };
 
@@ -40,9 +39,6 @@ export const CONFIG = {
   // API Configuration
   API_BASE_URL: apiBaseUrl,
   API_TIMEOUT: 30000,
-
-  // MongoDB
-  MONGODB_URI: getEnvVar('MONGODB_URI', ''),
 
   // Proximity settings
   PROXIMITY_THRESHOLD_KM: 1.0, // 1km threshold

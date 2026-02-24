@@ -31,8 +31,12 @@ class LocationService {
       await this.initialize();
     }
 
+    if (this.watchPositionSubscription) {
+      this.watchPositionSubscription.remove();
+      this.watchPositionSubscription = null;
+    }
+
     try {
-      // Start watching position
       this.watchPositionSubscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,

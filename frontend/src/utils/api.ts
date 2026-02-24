@@ -45,12 +45,16 @@ class ApiClient {
                 refreshToken,
               });
 
-              const {accessToken, refreshToken: newRefreshToken} = response.data.data;
+              const tokenData = response.data?.data;
+              if (!tokenData?.accessToken) {
+                throw new Error('Invalid refresh response');
+              }
               await storage.setTokens({
-                accessToken,
-                refreshToken: newRefreshToken,
-                expiresIn: response.data.data.expiresIn,
+                accessToken: tokenData.accessToken,
+                refreshToken: tokenData.refreshToken,
+                expiresIn: tokenData.expiresIn,
               });
+              const accessToken = tokenData.accessToken;
 
               originalRequest.headers.Authorization = `Bearer ${accessToken}`;
               return this.client(originalRequest);

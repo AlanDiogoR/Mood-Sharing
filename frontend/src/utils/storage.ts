@@ -135,6 +135,10 @@ export const storage = {
   },
 
   async clearAll(): Promise<void> {
-    await AsyncStorage.multiRemove(Object.values(STORAGE_KEYS));
+    const allKeys = await AsyncStorage.getAllKeys();
+    const appKeys = allKeys.filter(k => k.startsWith('@mood_app:'));
+    if (appKeys.length > 0) {
+      await AsyncStorage.multiRemove(appKeys);
+    }
   },
 };

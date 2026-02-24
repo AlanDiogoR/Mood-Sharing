@@ -99,7 +99,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({ onBackToResumo }) 
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>{plan?.title || 'Treino do dia'}</Text>
 
-      {plan?.exercises.map((exercise: WorkoutExercise, index: number) => (
+      {plan?.exercises?.map((exercise: WorkoutExercise, index: number) => (
         <View key={`${exercise.name}-${index}`} style={styles.card}>
           <Text style={styles.cardTitle}>{exercise.name}</Text>
           <Text style={styles.cardHint}>Series: {exercise.series}</Text>

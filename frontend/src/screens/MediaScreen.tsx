@@ -146,10 +146,15 @@ export const MediaScreen: React.FC = () => {
 
   const handleDragEnd = async (data: MediaItem[]) => {
     setItems(data);
-    const orderedIds = data.map(item => item.id);
-    const response = await mediaService.reorder(orderedIds);
-    if (!response.success) {
-      Alert.alert('Erro', response.error || 'Não foi possível reordenar');
+    try {
+      const orderedIds = data.map(item => item.id);
+      const response = await mediaService.reorder(orderedIds);
+      if (!response.success) {
+        Alert.alert('Erro', response.error || 'Não foi possível reordenar');
+        await loadItems();
+      }
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao reordenar itens');
       await loadItems();
     }
   };

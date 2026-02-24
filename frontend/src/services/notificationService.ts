@@ -58,6 +58,8 @@ class NotificationService {
   private expoPushToken: string | null = null;
   private isInitialized: boolean = false;
   private lockScreenNotificationId: string | null = null;
+  private receivedSub: any = null;
+  private responseSub: any = null;
 
   async initialize(): Promise<void> {
     const Notifications = await getNotifications();
@@ -101,8 +103,7 @@ class NotificationService {
             projectId: CONFIG.EXPO_PROJECT_ID,
           });
           this.expoPushToken = tokenData.data;
-          console.log('Expo Push Token:', this.expoPushToken);
-          
+
           // Envia o token para o backend
           await this.sendTokenToBackend(this.expoPushToken);
         } catch (error) {
@@ -130,15 +131,11 @@ class NotificationService {
         }
       }
 
-      // Setup notification listeners
       try {
-        Notifications.addNotificationReceivedListener(notification => {
-          console.log('Notification received:', notification);
-        });
-
-        Notifications.addNotificationResponseReceivedListener(response => {
-          console.log('Notification response:', response);
-        });
+        if (this.receivedSub) this.receivedSub.remove();
+        if (this.responseSub) this.responseSub.remove();
+        this.receivedSub = Notifications.addNotificationReceivedListener(() => {});
+        this.responseSub = Notifications.addNotificationResponseReceivedListener(() => {});
       } catch (error) {
         // Ignorar erro de listeners no Expo Go
         if (!isExpoGo) {

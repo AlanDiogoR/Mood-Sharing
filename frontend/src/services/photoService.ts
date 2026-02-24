@@ -2,7 +2,7 @@ import { apiClient } from '../utils/api';
 import { ApiResponse, SharedPhoto } from '../types';
 
 export interface PhotoGalleryResponse {
-  data: SharedPhoto[];
+  photos: SharedPhoto[];
   pagination: {
     page: number;
     limit: number;

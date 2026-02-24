@@ -55,6 +55,8 @@ class FirebaseService {
   private fcmToken: string | null = null;
   private isInitialized: boolean = false;
   private messaging: any = null;
+  private tokenRefreshUnsub: (() => void) | null = null;
+  private messageUnsub: (() => void) | null = null;
 
   async initialize(): Promise<void> {
     if (isExpoGo) {
@@ -87,7 +89,6 @@ class FirebaseService {
       try {
         const token = await this.messaging.getToken();
         this.fcmToken = token;
-        console.log('FCM Token:', this.fcmToken);
 
         // Envia o token para o backend
         await this.sendTokenToBackend(token);
@@ -95,17 +96,13 @@ class FirebaseService {
         console.warn('Erro ao obter FCM token:', error);
       }
 
-      // Configura listener para quando o token é atualizado
-      this.messaging.onTokenRefresh(async (token: string) => {
+      if (this.tokenRefreshUnsub) this.tokenRefreshUnsub();
+      if (this.messageUnsub) this.messageUnsub();
+      this.tokenRefreshUnsub = this.messaging.onTokenRefresh(async (token: string) => {
         this.fcmToken = token;
         await this.sendTokenToBackend(token);
       });
-
-      // Configura listener para mensagens em foreground
-      this.messaging.onMessage(async (remoteMessage: any) => {
-        console.log('Mensagem recebida em foreground:', remoteMessage);
-        // A notificação será exibida automaticamente pelo sistema
-      });
+      this.messageUnsub = this.messaging.onMessage(async () => {});
 
       this.isInitialized = true;
     } catch (error) {

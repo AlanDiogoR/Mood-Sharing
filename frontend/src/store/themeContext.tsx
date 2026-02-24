@@ -30,8 +30,6 @@ const buildThemeColors = (primary?: string | null, secondary?: string | null): T
     ...COLORS,
     primary: resolvedPrimary,
     secondary: resolvedSecondary,
-    primaryLight: resolvedSecondary,
-    secondaryLight: resolvedSecondary,
   };
 };
 
