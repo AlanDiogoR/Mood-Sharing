@@ -27,7 +27,8 @@ export const authService = {
 
   async logout(): Promise<void> {
     try {
-      await apiClient.post('/auth/logout');
+      const refreshToken = await storage.getRefreshToken();
+      await apiClient.post('/auth/logout', refreshToken ? {refreshToken} : undefined);
     } catch (error) {
       console.error('Error logging out:', error);
     } finally {

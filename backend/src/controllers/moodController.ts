@@ -215,6 +215,14 @@ export const updateMoodWithProximity = async (req: AuthRequest, res: Response): 
     const userId = req.user?.userId;
     const { type, location, extraEmoji, extraLabel } = req.body;
 
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        error: 'Não autenticado',
+      });
+      return;
+    }
+
     if (!type || !Object.values(MoodType).includes(type)) {
       res.status(400).json({
         success: false,
@@ -314,7 +322,7 @@ export const getMoodHistory = async (req: AuthRequest, res: Response): Promise<v
   try {
     const userId = req.params.userId;
     const currentUserId = req.user?.userId;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string, 10) || 10, 1), 100);
 
     // Só pode ver o próprio histórico ou do parceiro
     if (userId !== currentUserId) {

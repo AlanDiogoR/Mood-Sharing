@@ -9,6 +9,7 @@ import {useAuth} from './authContext';
 import {widgetService} from '../services/widgetService';
 import {userService} from '../services/userService';
 import {meetingService} from '../services/meetingService';
+import {analytics, ANALYTICS_EVENTS} from '../services/analyticsService';
 
 interface MoodContextType {
   currentMood: Mood | null;
@@ -316,6 +317,11 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
 
       if (response.success && response.data) {
         setCurrentMood(response.data);
+        analytics.track(ANALYTICS_EVENTS.MOOD_SHARED, {
+          moodType: type,
+          hasMessage: !!message,
+          hasPartner: !!user.partnerId,
+        });
         await refreshMoods();
 
         // Atualização de notificações é tratada no refreshMoods para evitar duplicidade

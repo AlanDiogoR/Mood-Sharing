@@ -1,5 +1,7 @@
 export type UserRole = 'user' | 'admin';
 
+export type SubscriptionPlan = 'free' | 'premium';
+
 export interface User {
   id: string;
   email: string;
@@ -11,6 +13,8 @@ export interface User {
   photoUploadedAt?: string | null;
   themePrimary?: string | null;
   themeSecondary?: string | null;
+  plan?: SubscriptionPlan;
+  isPremium?: boolean;
   createdAt: string;
   updatedAt: string;
 }

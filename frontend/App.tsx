@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/store/authContext';
 import { MoodProvider } from './src/store/moodContext';
 import { ThemeProvider } from './src/store/themeContext';
+import { PremiumProvider } from './src/store/premiumContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { COLORS } from './src/constants/colors';
 import { notificationService } from './src/services/notificationService';
@@ -33,14 +34,16 @@ const App = () => {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <ThemeProvider>
-            <MoodProvider>
-              <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-              <NavigationContainer>
-                <AppNavigator />
-              </NavigationContainer>
-            </MoodProvider>
-          </ThemeProvider>
+          <PremiumProvider>
+            <ThemeProvider>
+              <MoodProvider>
+                <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+                <NavigationContainer>
+                  <AppNavigator />
+                </NavigationContainer>
+              </MoodProvider>
+            </ThemeProvider>
+          </PremiumProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

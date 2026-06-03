@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Share, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../constants/colors';
 import { useAuth } from '../store/authContext';
@@ -7,6 +7,7 @@ import { useTheme } from '../store/themeContext';
 import { userService } from '../services/userService';
 import { authService } from '../services/authService';
 import { Input } from '../components/common/Input';
+import { analytics, ANALYTICS_EVENTS } from '../services/analyticsService';
 
 const normalizeHex = (value: string): string => {
   const trimmed = value.trim();
@@ -20,7 +21,7 @@ const isValidHex = (value: string): boolean => /^#?[0-9a-fA-F]{6}$/.test(value.t
 
 export const EditProfileScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
   const { colors, setThemeColors } = useTheme();
   const [name, setName] = useState(user?.name ?? '');
   const [partnerName, setPartnerName] = useState(user?.partnerName ?? '');
@@ -31,6 +32,9 @@ export const EditProfileScreen: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const normalizedPrimary = useMemo(() => normalizeHex(primaryColor), [primaryColor]);
   const normalizedSecondary = useMemo(() => normalizeHex(secondaryColor), [secondaryColor]);
@@ -110,6 +114,60 @@ export const EditProfileScreen: React.FC = () => {
     }
   };
 
+  const handleExportData = async () => {
+    setExporting(true);
+    analytics.track(ANALYTICS_EVENTS.DATA_EXPORT_REQUESTED);
+    try {
+      const response = await userService.exportMyData();
+      if (response.success && response.data) {
+        const json = JSON.stringify(response.data, null, 2);
+        await Share.share({
+          title: 'Meus dados — Mood Sharing',
+          message: json,
+        });
+      } else {
+        Alert.alert('Erro', response.error || 'Não foi possível exportar seus dados');
+      }
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao exportar dados');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const performDelete = async () => {
+    setDeleting(true);
+    analytics.track(ANALYTICS_EVENTS.ACCOUNT_DELETION_REQUESTED);
+    try {
+      const response = await userService.deleteAccount(deletePassword);
+      if (response.success) {
+        Alert.alert('Conta excluída', 'Sua conta e seus dados foram removidos.');
+        await logout();
+      } else {
+        Alert.alert('Erro', response.error || 'Não foi possível excluir a conta');
+      }
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao excluir conta');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    if (!deletePassword) {
+      Alert.alert('Atenção', 'Digite sua senha para confirmar a exclusão');
+      return;
+    }
+    Alert.alert(
+      'Excluir conta',
+      'Esta ação é permanente. Todos os seus dados e o conteúdo compartilhado com seu parceiro serão apagados e não poderão ser recuperados. Deseja continuar?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir tudo', style: 'destructive', onPress: performDelete },
+      ]
+    );
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
@@ -175,6 +233,43 @@ export const EditProfileScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
         </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Privacidade e dados</Text>
+          <Text style={styles.helperText}>
+            Seus dados são só de vocês. Baixe uma cópia em JSON a qualquer momento (LGPD).
+          </Text>
+          <TouchableOpacity
+            style={[styles.secondaryButton, { borderColor: colors.primary }]}
+            onPress={handleExportData}
+            disabled={exporting}>
+            <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
+              {exporting ? 'Exportando...' : 'Exportar meus dados'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.section, styles.dangerSection]}>
+          <Text style={[styles.sectionTitle, { color: COLORS.error }]}>Zona de perigo</Text>
+          <Text style={styles.helperText}>
+            Excluir a conta apaga permanentemente seus dados e o conteúdo compartilhado com seu
+            parceiro. Digite sua senha para confirmar.
+          </Text>
+          <Input
+            label="Senha"
+            value={deletePassword}
+            onChangeText={setDeletePassword}
+            secureTextEntry
+          />
+          <TouchableOpacity
+            style={[styles.dangerButton]}
+            onPress={handleDeleteAccount}
+            disabled={deleting}>
+            <Text style={styles.dangerButtonText}>
+              {deleting ? 'Excluindo...' : 'Excluir minha conta'}
+            </Text>
+          </TouchableOpacity>
+        </View>
     </ScrollView>
   );
 };
@@ -232,6 +327,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondaryButtonText: {
+    fontWeight: '700',
+  },
+  helperText: {
+    color: COLORS.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  dangerSection: {
+    borderColor: COLORS.error,
+  },
+  dangerButton: {
+    marginTop: 4,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: COLORS.error,
+  },
+  dangerButtonText: {
+    color: '#ffffff',
     fontWeight: '700',
   },
   colorPreviewRow: {

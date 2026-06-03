@@ -3,6 +3,16 @@ import {User, LoginCredentials, RegisterData} from '../types';
 import {authService} from '../services/authService';
 import {storage} from '../utils/storage';
 import {apiClient} from '../utils/api';
+import {analytics, ANALYTICS_EVENTS} from '../services/analyticsService';
+
+const identifyUser = (user: User): void => {
+  analytics.identify(user.id, {
+    name: user.name,
+    hasPartner: !!user.partnerId,
+    isPremium: !!user.isPremium,
+    plan: user.plan ?? 'free',
+  });
+};
 
 interface AuthContextType {
   user: User | null;
@@ -50,6 +60,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
         const response = await authService.getCurrentUser();
         if (response.success && response.data) {
           setUser(response.data);
+          identifyUser(response.data);
+          analytics.track(ANALYTICS_EVENTS.APP_OPENED);
         } else {
           await storage.clearAll();
         }
@@ -68,6 +80,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
       const response = await authService.login(credentials);
       if (response.success && response.data) {
         setUser(response.data.user);
+        identifyUser(response.data.user);
+        analytics.track(ANALYTICS_EVENTS.LOGGED_IN);
       } else {
         throw new Error(response.error || 'Erro ao fazer login');
       }
@@ -84,6 +98,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
       const response = await authService.register(data);
       if (response.success && response.data) {
         setUser(response.data.user);
+        identifyUser(response.data.user);
+        analytics.track(ANALYTICS_EVENTS.SIGNED_UP, {
+          withPartnerEmail: !!data.partnerEmail,
+        });
+        if (response.data.user.partnerId) {
+          analytics.track(ANALYTICS_EVENTS.PARTNER_LINKED, {source: 'signup'});
+        }
       } else {
         throw new Error(response.error || 'Erro ao registrar');
       }
@@ -96,6 +117,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
     setIsLoading(true);
     try {
       await authService.logout();
+      analytics.track(ANALYTICS_EVENTS.LOGGED_OUT);
+      analytics.reset();
       setUser(null);
     } finally {
       setIsLoading(false);

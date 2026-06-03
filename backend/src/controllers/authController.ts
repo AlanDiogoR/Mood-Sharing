@@ -2,9 +2,42 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import { User } from '../models/User';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken, TokenPayload } from '../utils/jwt';
+import { RefreshToken } from '../models/RefreshToken';
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+  generateTokenId,
+  getAccessTokenExpiresInSeconds,
+  getRefreshTokenExpiresAt,
+  TokenPayload,
+} from '../utils/jwt';
 import { AuthRequest } from '../middleware/auth';
 import { body, validationResult } from 'express-validator';
+
+// Gera um par de tokens e registra o refresh token (jti) na lista de tokens válidos.
+const issueTokens = async (payload: TokenPayload, session?: mongoose.ClientSession) => {
+  const accessToken = generateAccessToken(payload);
+  const jti = generateTokenId();
+  const refreshToken = generateRefreshToken(payload, jti);
+
+  await RefreshToken.create(
+    [
+      {
+        jti,
+        userId: new mongoose.Types.ObjectId(payload.userId),
+        expiresAt: getRefreshTokenExpiresAt(),
+      },
+    ],
+    session ? { session } : undefined
+  );
+
+  return {
+    accessToken,
+    refreshToken,
+    expiresIn: getAccessTokenExpiresInSeconds(),
+  };
+};
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -67,8 +100,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       email: user.email,
     };
 
-    const accessToken = generateAccessToken(tokenPayload);
-    const refreshToken = generateRefreshToken(tokenPayload);
+    const tokens = await issueTokens(tokenPayload);
 
     // Remove a senha da resposta
     const { password: _password, ...userResponse } = user.toJSON();
@@ -77,11 +109,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       success: true,
       data: {
         user: userResponse,
-        tokens: {
-          accessToken,
-          refreshToken,
-          expiresIn: 3600, // 1 hora
-        },
+        tokens,
       },
     });
   } catch (error: any) {
@@ -133,8 +161,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       email: user.email,
     };
 
-    const accessToken = generateAccessToken(tokenPayload);
-    const refreshToken = generateRefreshToken(tokenPayload);
+    const tokens = await issueTokens(tokenPayload);
 
     // Remove a senha da resposta
     const { password: _password, ...userResponse } = user.toJSON();
@@ -143,11 +170,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       success: true,
       data: {
         user: userResponse,
-        tokens: {
-          accessToken,
-          refreshToken,
-          expiresIn: 3600,
-        },
+        tokens,
       },
     });
   } catch (error: any) {
@@ -174,6 +197,16 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
     try {
       const decoded = verifyRefreshToken(refreshToken);
 
+      // O token precisa estar registrado, não revogado e não expirado.
+      const stored = await RefreshToken.findOne({ jti: decoded.jti });
+      if (!stored || stored.revoked || stored.expiresAt.getTime() <= Date.now()) {
+        res.status(401).json({
+          success: false,
+          error: 'Refresh token inválido ou expirado',
+        });
+        return;
+      }
+
       const userExists = await User.exists({ _id: decoded.userId });
       if (!userExists) {
         res.status(401).json({ success: false, error: 'Usuário não encontrado' });
@@ -185,16 +218,14 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
         email: decoded.email,
       };
 
-      const newAccessToken = generateAccessToken(tokenPayload);
-      const newRefreshToken = generateRefreshToken(tokenPayload);
+      // Rotação: emite um novo par e revoga o token usado.
+      const tokens = await issueTokens(tokenPayload);
+      stored.revoked = true;
+      await stored.save();
 
       res.json({
         success: true,
-        data: {
-          accessToken: newAccessToken,
-          refreshToken: newRefreshToken,
-          expiresIn: 3600,
-        },
+        data: tokens,
       });
     } catch (error) {
       res.status(401).json({
@@ -208,6 +239,30 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
       success: false,
       error: 'Erro ao renovar token',
     });
+  }
+};
+
+export const logout = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { refreshToken } = req.body ?? {};
+
+    // Sem refresh token não há o que revogar; o cliente apenas descarta os tokens locais.
+    if (!refreshToken) {
+      res.json({ success: true, message: 'Logout efetuado' });
+      return;
+    }
+
+    try {
+      const decoded = verifyRefreshToken(refreshToken);
+      await RefreshToken.updateOne({ jti: decoded.jti }, { $set: { revoked: true } });
+    } catch {
+      // Token inválido/expirado: nada a revogar, mas o logout é idempotente.
+    }
+
+    res.json({ success: true, message: 'Logout efetuado' });
+  } catch (error: any) {
+    console.error('Erro ao fazer logout:', error);
+    res.status(500).json({ success: false, error: 'Erro ao fazer logout' });
   }
 };
 

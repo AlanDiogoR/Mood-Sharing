@@ -40,4 +40,14 @@ export const userService = {
       },
     });
   },
+
+  async exportMyData(): Promise<ApiResponse<Record<string, unknown>>> {
+    return await apiClient.get<Record<string, unknown>>('/users/me/export');
+  },
+
+  async deleteAccount(password: string): Promise<ApiResponse<{ message: string }>> {
+    return await apiClient.delete<{ message: string }>('/users/me', {
+      data: { password },
+    });
+  },
 };

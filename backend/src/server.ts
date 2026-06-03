@@ -17,6 +17,27 @@ const getLocalIp = (): string | null => {
   return null;
 };
 
+let server: ReturnType<typeof app.listen> | null = null;
+
+const shutdown = (reason: string, error?: unknown) => {
+  console.error(`❌ Encerrando o servidor (${reason}):`, error);
+  if (server) {
+    server.close(() => process.exit(1));
+    // Garante a saída mesmo que o close não complete a tempo.
+    setTimeout(() => process.exit(1), 10000).unref();
+  } else {
+    process.exit(1);
+  }
+};
+
+process.on('unhandledRejection', (reason) => {
+  shutdown('unhandledRejection', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  shutdown('uncaughtException', error);
+});
+
 const startServer = async () => {
   try {
     await connectDatabase();
@@ -26,7 +47,7 @@ const startServer = async () => {
 
     initializeFirebaseAdmin();
 
-    app.listen(env.PORT, '0.0.0.0', () => {
+    server = app.listen(env.PORT, '0.0.0.0', () => {
       console.log(`🚀 Servidor rodando na porta ${env.PORT}`);
       console.log(`📍 Health check: http://localhost:${env.PORT}/health`);
       console.log(`📡 API: http://localhost:${env.PORT}/api`);

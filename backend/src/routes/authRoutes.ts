@@ -4,6 +4,7 @@ import {
   register,
   login,
   refresh,
+  logout,
   getCurrentUser,
   linkPartner,
   updateFcmToken,
@@ -28,6 +29,7 @@ const authLimiter = rateLimit({
 router.post('/register', authLimiter, validateRegister, register);
 router.post('/login', authLimiter, validateLogin, login);
 router.post('/refresh', authLimiter, refresh);
+router.post('/logout', logout);
 router.get('/me', authenticate, getCurrentUser);
 router.post('/link-partner', authenticate, linkPartner);
 router.post('/fcm-token', authenticate, updateFcmToken);
