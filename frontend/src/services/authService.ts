@@ -58,10 +58,6 @@ export const authService = {
     return await apiClient.get<User>('/auth/me');
   },
 
-  async linkPartner(partnerEmail: string): Promise<ApiResponse<User>> {
-    return await apiClient.post<User>('/auth/link-partner', {partnerEmail});
-  },
-
   async verifyPassword(password: string): Promise<ApiResponse<{ message: string }>> {
     return await apiClient.post<{ message: string }>('/auth/verify-password', { password });
   },

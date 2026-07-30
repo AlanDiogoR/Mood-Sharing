@@ -64,10 +64,20 @@ export interface MoodOption {
   color: string;
 }
 
-export interface Location {
+export interface Coordinates {
   latitude: number;
   longitude: number;
+}
+
+export interface Location extends Coordinates {
   timestamp: number;
+}
+
+export interface GoalItem {
+  id: string;
+  title: string;
+  category: string;
+  completed: boolean;
 }
 
 export interface AuthTokens {
@@ -93,6 +103,31 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   message?: string;
+}
+
+export interface ReceivedPartnerInvite {
+  id: string;
+  fromName: string;
+  fromEmail: string;
+  createdAt: string;
+}
+
+export interface SentPartnerInvite {
+  id: string;
+  toName: string;
+  toEmail: string;
+  createdAt: string;
+}
+
+export interface PartnerInvites {
+  received: ReceivedPartnerInvite[];
+  sent: SentPartnerInvite[];
+}
+
+export interface SendPartnerInviteResult {
+  linked: boolean;
+  user?: User;
+  invite?: {id: string};
 }
 
 export type MediaType = 'movie' | 'series';

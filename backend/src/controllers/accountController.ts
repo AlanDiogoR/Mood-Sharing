@@ -13,6 +13,7 @@ import { WorkoutSummary } from '../models/WorkoutSummary';
 import { GoalList } from '../models/Goal';
 import { CoupleDaySummary } from '../models/CoupleDaySummary';
 import { RefreshToken } from '../models/RefreshToken';
+import { PartnerInvite } from '../models/PartnerInvite';
 import { isServerless, uploadDir } from '../config/uploads';
 import { AuthRequest } from '../middleware/auth';
 
@@ -149,6 +150,7 @@ export const deleteMyAccount = async (req: AuthRequest, res: Response): Promise<
         GoalList.deleteMany({ userId }, { session }),
         CoupleDaySummary.deleteMany({ pairKey }, { session }),
         RefreshToken.deleteMany({ userId }, { session }),
+        PartnerInvite.deleteMany({ $or: [{ fromUserId: userId }, { toUserId: userId }] }, { session }),
       ]);
 
       if (partnerId) {

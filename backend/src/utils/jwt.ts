@@ -25,8 +25,14 @@ export interface RefreshTokenPayload extends TokenPayload {
   jti: string;
 }
 
+// Algoritmo fixado para evitar ataques de confusão de algoritmo (ex.: "none"/RS256).
+const JWT_ALGORITHM = 'HS256' as const;
+
 export const generateAccessToken = (payload: TokenPayload): string => {
-  const options: SignOptions = { expiresIn: JWT_EXPIRES_IN as SignOptions['expiresIn'] };
+  const options: SignOptions = {
+    expiresIn: JWT_EXPIRES_IN as SignOptions['expiresIn'],
+    algorithm: JWT_ALGORITHM,
+  };
   return jwt.sign(payload, JWT_SECRET, options);
 };
 
@@ -34,16 +40,17 @@ export const generateRefreshToken = (payload: TokenPayload, jti: string): string
   const options: SignOptions = {
     expiresIn: JWT_REFRESH_EXPIRES_IN as SignOptions['expiresIn'],
     jwtid: jti,
+    algorithm: JWT_ALGORITHM,
   };
   return jwt.sign(payload, JWT_REFRESH_SECRET, options);
 };
 
 export const verifyAccessToken = (token: string): TokenPayload => {
-  return jwt.verify(token, JWT_SECRET) as TokenPayload;
+  return jwt.verify(token, JWT_SECRET, { algorithms: [JWT_ALGORITHM] }) as TokenPayload;
 };
 
 export const verifyRefreshToken = (token: string): RefreshTokenPayload => {
-  return jwt.verify(token, JWT_REFRESH_SECRET) as RefreshTokenPayload;
+  return jwt.verify(token, JWT_REFRESH_SECRET, { algorithms: [JWT_ALGORITHM] }) as RefreshTokenPayload;
 };
 
 export const generateTokenId = (): string => crypto.randomUUID();

@@ -123,13 +123,14 @@ Retorna informações do usuário autenticado.
 Authorization: Bearer <access_token>
 ```
 
-#### POST `/api/auth/link-partner`
-Vincula um parceiro ao usuário.
+### Parceiro (convite com consentimento)
 
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
+O vínculo de parceiro exige o aceite do convidado. Todas as rotas exigem
+`Authorization: Bearer <access_token>`.
+
+#### POST `/api/partner/invite`
+Envia um convite de parceiro (se a outra pessoa já tiver convidado você, o
+vínculo é feito na hora).
 
 **Body:**
 ```json
@@ -137,6 +138,21 @@ Authorization: Bearer <access_token>
   "partnerEmail": "partner@example.com"
 }
 ```
+
+#### GET `/api/partner/invites`
+Lista convites pendentes recebidos e enviados.
+
+#### POST `/api/partner/invites/:id/accept`
+Aceita um convite recebido (efetiva o vínculo).
+
+#### POST `/api/partner/invites/:id/decline`
+Recusa um convite recebido.
+
+#### POST `/api/partner/invites/:id/cancel`
+Cancela um convite enviado.
+
+#### POST `/api/partner/unlink`
+Desfaz o vínculo atual (o parceiro é notificado).
 
 ### Estados Emocionais
 

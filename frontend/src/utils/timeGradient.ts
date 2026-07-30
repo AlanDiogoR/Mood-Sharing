@@ -1,4 +1,4 @@
-export const getTimeGradientColors = (date: Date = new Date()): string[] => {
+export const getTimeGradientColors = (date: Date = new Date()): [string, string] => {
   const hour = date.getHours();
 
   if (hour >= 16 && hour <= 19) {

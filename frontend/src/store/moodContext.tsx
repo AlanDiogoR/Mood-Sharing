@@ -1,5 +1,5 @@
 import React, {createContext, useContext, useState, useEffect, ReactNode, useRef} from 'react';
-import {Mood, MoodType, Location, UserProfile} from '../types';
+import {ApiResponse, Mood, MoodType, Location, UserProfile} from '../types';
 import {moodService} from '../services/moodService';
 import {locationService} from '../services/locationService';
 import {notificationService} from '../services/notificationService';
@@ -199,7 +199,9 @@ export const MoodProvider: React.FC<MoodProviderProps> = ({children}) => {
     try {
       const [currentResponse, partnerResponse] = await Promise.all([
         moodService.getCurrentMood(user.id),
-        user.partnerId ? moodService.getPartnerMood(user.partnerId) : Promise.resolve({success: false}),
+        user.partnerId
+          ? moodService.getPartnerMood(user.partnerId)
+          : Promise.resolve<ApiResponse<Mood>>({success: false}),
       ]);
 
       if (currentResponse.success && currentResponse.data) {

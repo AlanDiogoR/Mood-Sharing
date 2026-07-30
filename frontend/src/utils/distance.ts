@@ -1,10 +1,10 @@
-import {Location} from '../types';
+import {Coordinates} from '../types';
 
 /**
  * Calculate distance between two coordinates using Haversine formula
  * Returns distance in kilometers
  */
-export const calculateDistance = (loc1: Location, loc2: Location): number => {
+export const calculateDistance = (loc1: Coordinates, loc2: Coordinates): number => {
   const R = 6371; // Earth's radius in kilometers
   const dLat = toRad(loc2.latitude - loc1.latitude);
   const dLon = toRad(loc2.longitude - loc1.longitude);
@@ -30,8 +30,8 @@ const toRad = (degrees: number): number => {
  * Check if two locations are within proximity threshold
  */
 export const isWithinProximity = (
-  loc1: Location,
-  loc2: Location,
+  loc1: Coordinates,
+  loc2: Coordinates,
   thresholdKm: number
 ): boolean => {
   const distance = calculateDistance(loc1, loc2);

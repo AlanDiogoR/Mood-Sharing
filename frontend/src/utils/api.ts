@@ -12,6 +12,9 @@ type OnAuthExpiredCallback = () => void;
 class ApiClient {
   private client: AxiosInstance;
   private onAuthExpired: OnAuthExpiredCallback | null = null;
+  // Single-flight: com rotação de refresh token no backend, dois refresh
+  // simultâneos invalidariam a sessão (o segundo usaria um token já revogado).
+  private refreshPromise: Promise<string> | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -50,27 +53,8 @@ class ApiClient {
           originalRequest._retry = true;
 
           try {
-            const refreshToken = await storage.getRefreshToken();
-            if (!refreshToken) {
-              throw new Error('No refresh token');
-            }
-
-            const response = await axios.post(`${CONFIG.API_BASE_URL}/auth/refresh`, {
-              refreshToken,
-            });
-
-            const tokenData = response.data?.data;
-            if (!tokenData?.accessToken) {
-              throw new Error('Invalid refresh response');
-            }
-
-            await storage.setTokens({
-              accessToken: tokenData.accessToken,
-              refreshToken: tokenData.refreshToken,
-              expiresIn: tokenData.expiresIn,
-            });
-
-            originalRequest.headers.Authorization = `Bearer ${tokenData.accessToken}`;
+            const newAccessToken = await this.refreshTokens();
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
             return this.client(originalRequest);
           } catch {
             await storage.clearAll();
@@ -82,6 +66,39 @@ class ApiClient {
         return Promise.reject(error);
       }
     );
+  }
+
+  private refreshTokens(): Promise<string> {
+    if (!this.refreshPromise) {
+      this.refreshPromise = (async () => {
+        try {
+          const refreshToken = await storage.getRefreshToken();
+          if (!refreshToken) {
+            throw new Error('No refresh token');
+          }
+
+          const response = await axios.post(`${CONFIG.API_BASE_URL}/auth/refresh`, {
+            refreshToken,
+          });
+
+          const tokenData = response.data?.data;
+          if (!tokenData?.accessToken) {
+            throw new Error('Invalid refresh response');
+          }
+
+          await storage.setTokens({
+            accessToken: tokenData.accessToken,
+            refreshToken: tokenData.refreshToken,
+            expiresIn: tokenData.expiresIn,
+          });
+
+          return tokenData.accessToken as string;
+        } finally {
+          this.refreshPromise = null;
+        }
+      })();
+    }
+    return this.refreshPromise;
   }
 
   async get<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {

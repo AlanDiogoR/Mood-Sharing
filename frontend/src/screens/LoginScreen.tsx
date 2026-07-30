@@ -22,9 +22,15 @@ export const LoginScreen: React.FC = () => {
       newErrors.email = 'Email inválido';
     }
 
-    const passwordValidation = validation.password(password);
+    const passwordValidation = isLoginMode
+      ? validation.password(password)
+      : validation.newPassword(password);
     if (!passwordValidation.isValid) {
       newErrors.password = passwordValidation.message || 'Senha inválida';
+    }
+
+    if (!isLoginMode && partnerEmail && !validation.email(partnerEmail)) {
+      newErrors.partnerEmail = 'Email do parceiro inválido';
     }
 
     if (!isLoginMode) {
@@ -105,14 +111,23 @@ export const LoginScreen: React.FC = () => {
           />
 
           {!isLoginMode && (
-            <Input
-              label="Email do Parceiro (opcional)"
-              value={partnerEmail}
-              onChangeText={setPartnerEmail}
-              placeholder="parceiro@email.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
+            <>
+              <Input
+                label="Email do Parceiro (opcional)"
+                value={partnerEmail}
+                onChangeText={setPartnerEmail}
+                placeholder="parceiro@email.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                error={errors.partnerEmail}
+              />
+              {!!partnerEmail && (
+                <Text style={styles.helperText}>
+                  Seu parceiro receberá um convite e precisa aceitá-lo para que vocês fiquem
+                  vinculados.
+                </Text>
+              )}
+            </>
           )}
 
           {errors.submit && <Text style={styles.errorText}>{errors.submit}</Text>}
@@ -177,5 +192,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 16,
     textAlign: 'center',
+  },
+  helperText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 16,
   },
 });

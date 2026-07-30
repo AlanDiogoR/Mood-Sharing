@@ -102,10 +102,11 @@ class NotificationService {
           const tokenData = await Notifications.getExpoPushTokenAsync({
             projectId: CONFIG.EXPO_PROJECT_ID,
           });
-          this.expoPushToken = tokenData.data;
+          const pushToken: string = tokenData.data;
+          this.expoPushToken = pushToken;
 
           // Envia o token para o backend
-          await this.sendTokenToBackend(this.expoPushToken);
+          await this.sendTokenToBackend(pushToken);
         } catch (error) {
           console.warn('Error getting Expo push token:', error);
         }
@@ -168,9 +169,10 @@ class NotificationService {
         const tokenData = await Notifications.getExpoPushTokenAsync({
           projectId: CONFIG.EXPO_PROJECT_ID,
         });
-        this.expoPushToken = tokenData.data;
+        const pushToken: string = tokenData.data;
+        this.expoPushToken = pushToken;
         // Envia o token para o backend quando obtido
-        await this.sendTokenToBackend(this.expoPushToken);
+        await this.sendTokenToBackend(pushToken);
       } catch (error) {
         console.error('Error getting Expo push token:', error);
       }

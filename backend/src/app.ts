@@ -3,8 +3,10 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import mongoSanitize from 'express-mongo-sanitize';
 import { env } from './config/env';
 import authRoutes from './routes/authRoutes';
+import partnerRoutes from './routes/partnerRoutes';
 import moodRoutes from './routes/moodRoutes';
 import userRoutes from './routes/userRoutes';
 import mediaRoutes from './routes/mediaRoutes';
@@ -52,8 +54,20 @@ app.use(cors(corsOptions));
 app.use(morgan(env.IS_PRODUCTION ? 'combined' : 'dev'));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+// Remove operadores do MongoDB ($, .) de body/params/query (defesa contra NoSQL injection).
+app.use(mongoSanitize());
 if (!isServerless) {
-  app.use('/uploads', express.static(uploadDir));
+  app.use(
+    '/uploads',
+    express.static(uploadDir, {
+      // Uploads nunca devem ser interpretados como página/script pelo navegador.
+      setHeaders: res => {
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Content-Disposition', 'inline');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+      },
+    })
+  );
 }
 
 // Health check
@@ -68,6 +82,7 @@ app.get('/health', (_req, res) => {
 // Routes
 app.get('/api/uploads/:key', getPublicUserPhoto);
 app.use('/api/auth', authRoutes);
+app.use('/api/partner', partnerRoutes);
 app.use('/api/moods', moodRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/media', mediaRoutes);

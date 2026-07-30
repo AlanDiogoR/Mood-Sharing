@@ -14,6 +14,12 @@ import {
 } from '../utils/jwt';
 import { AuthRequest } from '../middleware/auth';
 import { body, validationResult } from 'express-validator';
+import { createPartnerInviteQuietly } from './partnerController';
+
+const BCRYPT_SALT_ROUNDS = 12;
+
+// Aceita Expo Push Tokens (ExponentPushToken[...]) e tokens FCM.
+const FCM_TOKEN_PATTERN = /^[A-Za-z0-9\[\]_:.\-]{10,512}$/;
 
 // Gera um par de tokens e registra o refresh token (jti) na lista de tokens válidos.
 const issueTokens = async (payload: TokenPayload, session?: mongoose.ClientSession) => {
@@ -53,18 +59,19 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     const { email, password, name, partnerEmail } = req.body;
 
-    // Verifica se o usuário já existe
+    // Verifica se o usuário já existe. A mensagem é genérica de propósito,
+    // para dificultar a enumeração de emails cadastrados.
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       res.status(400).json({
         success: false,
-        error: 'Email já cadastrado',
+        error: 'Não foi possível criar a conta com os dados informados',
       });
       return;
     }
 
     // Hash da senha
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
 
     // Cria o usuário
     const user = new User({
@@ -73,25 +80,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       name,
     });
 
-    if (partnerEmail) {
-      const partner = await User.findOne({ email: partnerEmail.toLowerCase() });
-      if (partner) {
-        const session = await mongoose.startSession();
-        try {
-          await session.withTransaction(async () => {
-            user.partnerId = partner._id;
-            partner.partnerId = user._id;
-            await user.save({ session });
-            await partner.save({ session });
-          });
-        } finally {
-          await session.endSession();
-        }
-      } else {
-        await user.save();
-      }
-    } else {
-      await user.save();
+    await user.save();
+
+    // O vínculo de parceiro exige consentimento: em vez de vincular direto,
+    // registra um convite pendente que o parceiro precisa aceitar.
+    if (partnerEmail && typeof partnerEmail === 'string') {
+      await createPartnerInviteQuietly(user, partnerEmail);
     }
 
     // Gera tokens
@@ -300,79 +294,15 @@ export const getCurrentUser = async (req: AuthRequest, res: Response): Promise<v
   }
 };
 
-export const linkPartner = async (req: AuthRequest, res: Response): Promise<void> => {
-  const session = await mongoose.startSession();
-  try {
-    const userId = req.user?.userId;
-    const { partnerEmail } = req.body;
-
-    if (!partnerEmail) {
-      res.status(400).json({
-        success: false,
-        error: 'Email do parceiro não fornecido',
-      });
-      return;
-    }
-
-    const user = await User.findById(userId);
-    if (!user) {
-      res.status(404).json({
-        success: false,
-        error: 'Usuário não encontrado',
-      });
-      return;
-    }
-
-    const partner = await User.findOne({ email: partnerEmail.toLowerCase() });
-    if (!partner) {
-      res.status(404).json({
-        success: false,
-        error: 'Parceiro não encontrado',
-      });
-      return;
-    }
-
-    if (partner._id.toString() === userId) {
-      res.status(400).json({
-        success: false,
-        error: 'Você não pode se vincular a si mesmo',
-      });
-      return;
-    }
-
-    await session.withTransaction(async () => {
-      user.partnerId = partner._id;
-      partner.partnerId = user._id;
-      await user.save({ session });
-      await partner.save({ session });
-    });
-
-    const { password: _password, ...userResponse } = user.toJSON();
-
-    res.json({
-      success: true,
-      data: userResponse,
-    });
-  } catch (error: any) {
-    console.error('Erro ao vincular parceiro:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao vincular parceiro',
-    });
-  } finally {
-    await session.endSession();
-  }
-};
-
 export const updateFcmToken = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
     const { fcmToken } = req.body;
 
-    if (!fcmToken) {
+    if (!fcmToken || typeof fcmToken !== 'string' || !FCM_TOKEN_PATTERN.test(fcmToken)) {
       res.status(400).json({
         success: false,
-        error: 'Token de notificação não fornecido',
+        error: 'Token de notificação inválido',
       });
       return;
     }
@@ -464,8 +394,15 @@ export const changePassword = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    user.password = await bcrypt.hash(newPassword, 10);
+    user.password = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
     await user.save();
+
+    // Revoga todas as sessões: um refresh token roubado deixa de valer
+    // assim que a senha é trocada.
+    await RefreshToken.updateMany(
+      { userId: user._id, revoked: false },
+      { $set: { revoked: true } }
+    );
 
     res.json({ success: true, message: 'Senha atualizada com sucesso' });
   } catch (error: any) {
@@ -477,8 +414,12 @@ export const changePassword = async (req: AuthRequest, res: Response): Promise<v
 // Validações
 export const validateRegister = [
   body('email').isEmail().withMessage('Email inválido'),
-  body('password').isLength({ min: 6 }).withMessage('Senha deve ter pelo menos 6 caracteres'),
-  body('name').trim().isLength({ min: 2 }).withMessage('Nome deve ter pelo menos 2 caracteres'),
+  body('password')
+    .isString()
+    .isLength({ min: 8, max: 128 })
+    .withMessage('Senha deve ter entre 8 e 128 caracteres'),
+  body('name').trim().isLength({ min: 2, max: 80 }).withMessage('Nome deve ter entre 2 e 80 caracteres'),
+  body('partnerEmail').optional({ values: 'falsy' }).isEmail().withMessage('Email do parceiro inválido'),
 ];
 
 export const validateLogin = [
@@ -488,5 +429,8 @@ export const validateLogin = [
 
 export const validateChangePassword = [
   body('currentPassword').notEmpty().withMessage('Senha atual é obrigatória'),
-  body('newPassword').isLength({ min: 6 }).withMessage('Nova senha deve ter pelo menos 6 caracteres'),
+  body('newPassword')
+    .isString()
+    .isLength({ min: 8, max: 128 })
+    .withMessage('Nova senha deve ter entre 8 e 128 caracteres'),
 ];

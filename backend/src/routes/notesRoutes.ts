@@ -7,7 +7,12 @@ const router = Router();
 
 router.use(authenticate);
 
-const validateNoteContent = [body('content').trim().isLength({ min: 1 }).withMessage('Conteúdo é obrigatório')];
+const validateNoteContent = [
+  body('content')
+    .trim()
+    .isLength({ min: 1, max: 5000 })
+    .withMessage('Conteúdo deve ter entre 1 e 5000 caracteres'),
+];
 const validateNoteId = [param('id').isMongoId().withMessage('ID inválido')];
 
 router.get('/', listNotes);

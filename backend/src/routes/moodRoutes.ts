@@ -5,6 +5,7 @@ import {
   updateMood,
   updateMoodWithProximity,
   getMoodHistory,
+  validateMoodPayload,
 } from '../controllers/moodController';
 import {authenticate} from '../middleware/auth';
 
@@ -15,8 +16,8 @@ router.use(authenticate);
 
 router.get('/current/:userId', getCurrentMood);
 router.get('/partner/:partnerId', getPartnerMood);
-router.post('/', updateMood);
-router.post('/with-proximity', updateMoodWithProximity);
+router.post('/', validateMoodPayload, updateMood);
+router.post('/with-proximity', validateMoodPayload, updateMoodWithProximity);
 router.get('/history/:userId', getMoodHistory);
 
 export default router;

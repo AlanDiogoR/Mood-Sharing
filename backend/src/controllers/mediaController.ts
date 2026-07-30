@@ -28,21 +28,25 @@ const ensurePairKey = async (userId: string, pairKey: string): Promise<void> => 
 };
 
 export const validateCreateMedia = [
-  body('title').trim().isLength({ min: 1 }).withMessage('Título é obrigatório'),
+  body('title').trim().isLength({ min: 1, max: 200 }).withMessage('Título deve ter entre 1 e 200 caracteres'),
   body('type').isIn(['movie', 'series']).withMessage('Tipo inválido'),
-  body('notes').optional().isString().withMessage('Notas inválidas'),
+  body('notes').optional().isString().isLength({ max: 2000 }).withMessage('Notas devem ter no máximo 2000 caracteres'),
 ];
 
 export const validateUpdateMedia = [
   param('id').isMongoId().withMessage('ID inválido'),
-  body('title').optional().trim().isLength({ min: 1 }).withMessage('Título inválido'),
+  body('title').optional().trim().isLength({ min: 1, max: 200 }).withMessage('Título inválido'),
   body('type').optional().isIn(['movie', 'series']).withMessage('Tipo inválido'),
-  body('notes').optional().isString().withMessage('Notas inválidas'),
+  body('notes').optional().isString().isLength({ max: 2000 }).withMessage('Notas devem ter no máximo 2000 caracteres'),
   body('rating')
     .optional({ nullable: true })
     .isFloat({ min: 0, max: 5 })
     .withMessage('Avaliação inválida'),
-  body('review').optional({ nullable: true }).isString().withMessage('Comentário inválido'),
+  body('review')
+    .optional({ nullable: true })
+    .isString()
+    .isLength({ max: 2000 })
+    .withMessage('Comentário deve ter no máximo 2000 caracteres'),
   body('completed').optional().isBoolean().withMessage('Status inválido'),
 ];
 
@@ -50,8 +54,8 @@ export const validateGetOrDeleteMedia = [param('id').isMongoId().withMessage('ID
 
 export const validateReorderMedia = [
   body('orderedIds')
-    .isArray({ min: 1 })
-    .withMessage('orderedIds deve ser um array não vazio'),
+    .isArray({ min: 1, max: 500 })
+    .withMessage('orderedIds deve ser um array com 1 a 500 itens'),
   body('orderedIds.*').isMongoId().withMessage('IDs inválidos'),
 ];
 

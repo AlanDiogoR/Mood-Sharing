@@ -116,11 +116,10 @@ class AnalyticsService {
     return this.queue;
   }
 
-  private cleanProps(props: EventProps): EventProps {
+  private cleanProps(props: EventProps | IdentityTraits): EventProps {
     const result: EventProps = {};
-    Object.keys(props).forEach(key => {
-      const value = props[key];
-      if (value !== undefined && value !== null) {
+    Object.entries(props).forEach(([key, value]) => {
+      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
         result[key] = value;
       }
     });

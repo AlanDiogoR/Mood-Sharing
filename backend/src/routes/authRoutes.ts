@@ -6,7 +6,6 @@ import {
   refresh,
   logout,
   getCurrentUser,
-  linkPartner,
   updateFcmToken,
   verifyPassword,
   changePassword,
@@ -26,14 +25,23 @@ const authLimiter = rateLimit({
   message: { success: false, error: 'Muitas tentativas. Tente novamente em 15 minutos.' },
 });
 
+// Rotas autenticadas que verificam senha também precisam de limite estrito,
+// senão um access token vazado permite brute force da senha.
+const passwordCheckLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Muitas tentativas. Tente novamente em 15 minutos.' },
+});
+
 router.post('/register', authLimiter, validateRegister, register);
 router.post('/login', authLimiter, validateLogin, login);
 router.post('/refresh', authLimiter, refresh);
 router.post('/logout', logout);
 router.get('/me', authenticate, getCurrentUser);
-router.post('/link-partner', authenticate, linkPartner);
 router.post('/fcm-token', authenticate, updateFcmToken);
-router.post('/verify-password', authenticate, verifyPassword);
-router.post('/change-password', authenticate, validateChangePassword, changePassword);
+router.post('/verify-password', authenticate, passwordCheckLimiter, verifyPassword);
+router.post('/change-password', authenticate, passwordCheckLimiter, validateChangePassword, changePassword);
 
 export default router;

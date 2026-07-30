@@ -4,7 +4,7 @@
   "description": "Backend API para Mood Sharing App",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "jest"
@@ -25,6 +25,7 @@
     "dotenv": "^16.3.1",
     "expo-server-sdk": "^3.7.0",
     "express": "^4.18.2",
+    "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^8.2.1",
     "express-validator": "^7.0.1",
     "firebase-admin": "^13.10.0",
@@ -32,7 +33,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.3",
     "morgan": "^1.10.0",
-    "multer": "^1.4.5-lts.2",
+    "multer": "^2.2.0",
     "serverless-http": "^3.2.0",
     "typescript": "^5.3.3"
   },
@@ -42,9 +43,9 @@
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/morgan": "^1.9.9",
-    "@types/multer": "^1.4.7",
+    "@types/multer": "^2.2.0",
     "@types/node": "^20.10.5",
-    "ts-node-dev": "^2.0.0"
+    "tsx": "^4.23.1"
   },
   "overrides": {
     "uuid": "^11.1.1"

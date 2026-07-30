@@ -51,6 +51,16 @@ export const recordProximity = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
+    // Protege a integridade do histórico: não aceita timestamps no futuro
+    // nem mais antigos que 7 dias.
+    const now = Date.now();
+    const maxSkewMs = 5 * 60 * 1000;
+    const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
+    if (timestamp.getTime() > now + maxSkewMs || timestamp.getTime() < now - maxAgeMs) {
+      res.status(400).json({ success: false, error: 'Data fora do intervalo permitido' });
+      return;
+    }
+
     const partnerId = user.partnerId.toString();
     const pairKey = getPairKey(userId, partnerId);
     const dateKey = getDateKey(timestamp);

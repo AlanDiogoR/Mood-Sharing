@@ -9,7 +9,7 @@ interface GradientBackgroundProps {
 }
 
 export const GradientBackground: React.FC<GradientBackgroundProps> = ({ children, style }) => {
-  const [colors, setColors] = useState<string[]>(getTimeGradientColors());
+  const [colors, setColors] = useState<[string, string]>(getTimeGradientColors());
 
   useEffect(() => {
     const interval = setInterval(() => {

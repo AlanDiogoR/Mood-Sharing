@@ -31,10 +31,19 @@ const getPairKey = (userId: string, partnerId: string): string => {
 };
 
 export const validateSaveWorkout = [
-  body('dateKey').isString().withMessage('Data inválida'),
-  body('durationMinutes').isNumeric().withMessage('Duração inválida'),
-  body('calories').isNumeric().withMessage('Calorias inválidas'),
-  body('completedAt').isNumeric().withMessage('Data de conclusão inválida'),
+  body('dateKey')
+    .isString()
+    .matches(/^\d{4}-\d{2}-\d{2}$/)
+    .withMessage('Data inválida (use YYYY-MM-DD)'),
+  body('durationMinutes')
+    .isFloat({ min: 0, max: 1440 })
+    .withMessage('Duração deve estar entre 0 e 1440 minutos'),
+  body('calories')
+    .isFloat({ min: 0, max: 20000 })
+    .withMessage('Calorias devem estar entre 0 e 20000'),
+  body('completedAt')
+    .isInt({ min: 0, max: 4102444800000 })
+    .withMessage('Data de conclusão inválida'),
 ];
 
 export const saveWorkoutSummary = async (req: AuthRequest, res: Response): Promise<void> => {

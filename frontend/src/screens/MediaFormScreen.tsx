@@ -10,7 +10,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { COLORS } from '../constants/colors';
 import { MediaItem, MediaType } from '../types';
 import { mediaService } from '../services/mediaService';
@@ -18,12 +18,14 @@ import { useTheme } from '../store/themeContext';
 
 type Mode = 'create' | 'edit';
 
-type MediaFormRoute = {
-  params?: {
+type MediaFormParams = {
+  MediaForm: {
     mode?: Mode;
     item?: MediaItem;
-  };
+  } | undefined;
 };
+
+type MediaFormRoute = RouteProp<MediaFormParams, 'MediaForm'>;
 
 export const MediaFormScreen: React.FC = () => {
   const navigation = useNavigation();

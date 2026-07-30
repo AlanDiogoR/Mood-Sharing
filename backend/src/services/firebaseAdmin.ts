@@ -199,15 +199,9 @@ export async function sendToMultipleTokens(
     const response = await admin.messaging().sendEachForMulticast(message);
     console.log(`Notificações enviadas: ${response.successCount}/${tokens.length}`);
 
-    // Remove tokens inválidos
+    // Não loga os tokens em si (são credenciais de entrega de notificação).
     if (response.failureCount > 0) {
-      const invalidTokens: string[] = [];
-      response.responses.forEach((resp, idx) => {
-        if (!resp.success) {
-          invalidTokens.push(tokens[idx]);
-        }
-      });
-      console.warn('Tokens inválidos encontrados:', invalidTokens);
+      console.warn(`Tokens inválidos encontrados: ${response.failureCount}`);
     }
   } catch (error) {
     console.error('Erro ao enviar notificações múltiplas:', error);

@@ -1,7 +1,9 @@
 import { Response } from 'express';
 import path from 'path';
+import fs from 'fs';
 import crypto from 'crypto';
 import { getStore } from '@netlify/blobs';
+import { detectImageType } from '../middleware/upload';
 import { SharedPhoto } from '../models/SharedPhoto';
 import { User } from '../models/User';
 import { isServerless, uploadDir } from '../config/uploads';
@@ -30,18 +32,6 @@ const getSharedPhotoStore = () => {
   return getStore('shared-photos');
 };
 
-const getExtensionFromMime = (mimeType?: string): string => {
-  switch (mimeType) {
-    case 'image/png':
-      return '.png';
-    case 'image/webp':
-      return '.webp';
-    case 'image/jpeg':
-    default:
-      return '.jpg';
-  }
-};
-
 const getPairKey = (userId: string, partnerId: string): string => {
   const sorted = [userId, partnerId].sort();
   return `${sorted[0]}:${sorted[1]}`;
@@ -55,8 +45,18 @@ export const uploadSharedPhoto = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    if (!req.file) {
+    if (!req.file?.buffer) {
       res.status(400).json({ success: false, error: 'Arquivo não enviado' });
+      return;
+    }
+
+    // Valida o conteúdo real do arquivo (magic bytes), não o MIME declarado.
+    const detected = detectImageType(req.file.buffer);
+    if (!detected) {
+      res.status(400).json({
+        success: false,
+        error: 'Arquivo não é uma imagem válida. Use JPEG, PNG ou WEBP.',
+      });
       return;
     }
 
@@ -69,17 +69,10 @@ export const uploadSharedPhoto = async (req: AuthRequest, res: Response): Promis
     const partnerId = user.partnerId.toString();
     const pairKey = getPairKey(userId, partnerId);
 
-    let filename = '';
+    const filename = `${crypto.randomUUID()}${detected.extension}`;
     let photoUrl = '';
 
     if (isServerless) {
-      if (!req.file?.buffer) {
-        res.status(400).json({ success: false, error: 'Arquivo inválido' });
-        return;
-      }
-
-      const extension = getExtensionFromMime(req.file.mimetype);
-      filename = `${crypto.randomUUID()}${extension}`;
       photoUrl = `/api/uploads/${filename}`;
       const store = getSharedPhotoStore();
 
@@ -89,17 +82,12 @@ export const uploadSharedPhoto = async (req: AuthRequest, res: Response): Promis
       );
       await store.set(filename, arrayBuffer as unknown as any, {
         metadata: {
-          contentType: req.file.mimetype,
+          contentType: detected.mime,
         },
       });
     } else {
-      filename = req.file.filename;
       photoUrl = `/uploads/${filename}`;
-      const filePath = path.resolve(uploadDir, filename);
-      if (!filePath) {
-        res.status(500).json({ success: false, error: 'Falha ao salvar imagem' });
-        return;
-      }
+      await fs.promises.writeFile(path.resolve(uploadDir, filename), req.file.buffer);
     }
 
     const sharedPhoto = await SharedPhoto.create({

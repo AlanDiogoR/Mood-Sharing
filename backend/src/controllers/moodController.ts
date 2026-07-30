@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { body, validationResult } from 'express-validator';
 import { Mood, MoodType, ILocation } from '../models/Mood';
 import { User } from '../models/User';
 import { CoupleDaySummary } from '../models/CoupleDaySummary';
@@ -10,6 +11,57 @@ import { AuthRequest } from '../middleware/auth';
 
 const PROXIMITY_THRESHOLD_KM = 1.0;
 const MAX_MEETING_GAP_MINUTES = 30;
+
+const isValidLocation = (value: unknown): boolean =>
+  typeof value === 'object' &&
+  value !== null &&
+  typeof (value as ILocation).latitude === 'number' &&
+  Number.isFinite((value as ILocation).latitude) &&
+  (value as ILocation).latitude >= -90 &&
+  (value as ILocation).latitude <= 90 &&
+  typeof (value as ILocation).longitude === 'number' &&
+  Number.isFinite((value as ILocation).longitude) &&
+  (value as ILocation).longitude >= -180 &&
+  (value as ILocation).longitude <= 180;
+
+// Garante que só latitude/longitude cheguem ao banco (descarta chaves extras).
+const sanitizeLocation = (value: unknown): ILocation | undefined => {
+  if (!isValidLocation(value)) {
+    return undefined;
+  }
+  const { latitude, longitude } = value as ILocation;
+  return { latitude, longitude };
+};
+
+export const validateMoodPayload = [
+  body('type')
+    .isIn(Object.values(MoodType))
+    .withMessage('Tipo de estado emocional inválido'),
+  body('message')
+    .optional({ values: 'null' })
+    .isString()
+    .withMessage('Mensagem inválida')
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Mensagem deve ter no máximo 500 caracteres'),
+  body('extraEmoji')
+    .optional({ values: 'null' })
+    .isString()
+    .withMessage('Emoji extra inválido')
+    .isLength({ max: 16 })
+    .withMessage('Emoji extra muito longo'),
+  body('extraLabel')
+    .optional({ values: 'null' })
+    .isString()
+    .withMessage('Rótulo extra inválido')
+    .trim()
+    .isLength({ max: 60 })
+    .withMessage('Rótulo extra deve ter no máximo 60 caracteres'),
+  body('location')
+    .optional({ values: 'null' })
+    .custom(isValidLocation)
+    .withMessage('Localização inválida'),
+];
 
 const getPairKey = (userId: string, partnerId: string): string => {
   const sorted = [userId, partnerId].sort();
@@ -137,16 +189,18 @@ export const getPartnerMood = async (req: AuthRequest, res: Response): Promise<v
 
 export const updateMood = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user?.userId;
-    const { type, message, location, extraEmoji, extraLabel } = req.body;
-
-    if (!type || !Object.values(MoodType).includes(type)) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       res.status(400).json({
         success: false,
-        error: 'Tipo de estado emocional inválido',
+        error: 'Dados inválidos',
+        errors: errors.array(),
       });
       return;
     }
+
+    const userId = req.user?.userId;
+    const { type, message, location, extraEmoji, extraLabel } = req.body;
 
     const emoji = getMoodEmoji(type as MoodType);
 
@@ -159,7 +213,7 @@ export const updateMood = async (req: AuthRequest, res: Response): Promise<void>
         message,
         extraEmoji: extraEmoji ?? null,
         extraLabel: extraLabel ?? null,
-        location,
+        location: sanitizeLocation(location),
       },
       {
         new: true,
@@ -212,21 +266,24 @@ export const updateMood = async (req: AuthRequest, res: Response): Promise<void>
 
 export const updateMoodWithProximity = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({
+        success: false,
+        error: 'Dados inválidos',
+        errors: errors.array(),
+      });
+      return;
+    }
+
     const userId = req.user?.userId;
-    const { type, location, extraEmoji, extraLabel } = req.body;
+    const { type, extraEmoji, extraLabel } = req.body;
+    const location = sanitizeLocation(req.body.location);
 
     if (!userId) {
       res.status(401).json({
         success: false,
         error: 'Não autenticado',
-      });
-      return;
-    }
-
-    if (!type || !Object.values(MoodType).includes(type)) {
-      res.status(400).json({
-        success: false,
-        error: 'Tipo de estado emocional inválido',
       });
       return;
     }

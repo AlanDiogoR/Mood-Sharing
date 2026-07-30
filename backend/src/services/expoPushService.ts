@@ -21,7 +21,7 @@ export async function sendMoodChangeNotification(
   message?: string
 ): Promise<void> {
   if (!isExpoPushToken(expoPushToken)) {
-    console.warn('Token não é um Expo Push Token válido:', expoPushToken);
+    console.warn('Token não é um Expo Push Token válido');
     return;
   }
 
@@ -117,7 +117,7 @@ export async function sendProximityNotification(
   partnerName: string
 ): Promise<void> {
   if (!isExpoPushToken(expoPushToken)) {
-    console.warn('Token não é um Expo Push Token válido:', expoPushToken);
+    console.warn('Token não é um Expo Push Token válido');
     return;
   }
 

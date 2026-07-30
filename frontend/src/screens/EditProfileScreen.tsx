@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Share, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../constants/colors';
@@ -6,8 +6,11 @@ import { useAuth } from '../store/authContext';
 import { useTheme } from '../store/themeContext';
 import { userService } from '../services/userService';
 import { authService } from '../services/authService';
+import { partnerService } from '../services/partnerService';
 import { Input } from '../components/common/Input';
 import { analytics, ANALYTICS_EVENTS } from '../services/analyticsService';
+import { validation } from '../utils/validation';
+import { PartnerInvites } from '../types';
 
 const normalizeHex = (value: string): string => {
   const trimmed = value.trim();
@@ -35,6 +38,133 @@ export const EditProfileScreen: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [invites, setInvites] = useState<PartnerInvites>({ received: [], sent: [] });
+  const [partnerBusy, setPartnerBusy] = useState(false);
+
+  const hasPartner = !!user?.partnerId;
+
+  const loadInvites = useCallback(async () => {
+    if (hasPartner) {
+      return;
+    }
+    try {
+      const response = await partnerService.getInvites();
+      if (response.success && response.data) {
+        setInvites(response.data);
+      }
+    } catch (error) {
+      // Lista de convites é informativa; falha silenciosa não bloqueia a tela.
+    }
+  }, [hasPartner]);
+
+  useEffect(() => {
+    loadInvites();
+  }, [loadInvites]);
+
+  const handleSendInvite = async () => {
+    const email = inviteEmail.trim();
+    if (!validation.email(email)) {
+      Alert.alert('Atenção', 'Informe um email válido');
+      return;
+    }
+
+    setPartnerBusy(true);
+    try {
+      const response = await partnerService.sendInvite(email);
+      if (response.success && response.data) {
+        if (response.data.linked) {
+          analytics.track(ANALYTICS_EVENTS.PARTNER_LINKED, { source: 'invite' });
+          await refreshUser();
+          Alert.alert('Sucesso', 'Vocês já tinham convites mútuos — parceiro vinculado!');
+        } else {
+          Alert.alert('Convite enviado', 'Seu parceiro precisa aceitar o convite para vincular.');
+        }
+        setInviteEmail('');
+        await loadInvites();
+      } else {
+        Alert.alert('Erro', response.error || 'Não foi possível enviar o convite');
+      }
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao enviar convite');
+    } finally {
+      setPartnerBusy(false);
+    }
+  };
+
+  const handleAcceptInvite = async (inviteId: string) => {
+    setPartnerBusy(true);
+    try {
+      const response = await partnerService.acceptInvite(inviteId);
+      if (response.success) {
+        analytics.track(ANALYTICS_EVENTS.PARTNER_LINKED, { source: 'invite_accepted' });
+        await refreshUser();
+        Alert.alert('Sucesso', 'Parceiro vinculado!');
+      } else {
+        Alert.alert('Erro', response.error || 'Não foi possível aceitar o convite');
+        await loadInvites();
+      }
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao aceitar convite');
+    } finally {
+      setPartnerBusy(false);
+    }
+  };
+
+  const handleDeclineInvite = async (inviteId: string) => {
+    setPartnerBusy(true);
+    try {
+      await partnerService.declineInvite(inviteId);
+      await loadInvites();
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao recusar convite');
+    } finally {
+      setPartnerBusy(false);
+    }
+  };
+
+  const handleCancelInvite = async (inviteId: string) => {
+    setPartnerBusy(true);
+    try {
+      await partnerService.cancelInvite(inviteId);
+      await loadInvites();
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao cancelar convite');
+    } finally {
+      setPartnerBusy(false);
+    }
+  };
+
+  const handleUnlinkPartner = () => {
+    Alert.alert(
+      'Desvincular parceiro',
+      'Vocês vão parar de compartilhar humor, fotos e localização. Deseja continuar?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Desvincular',
+          style: 'destructive',
+          onPress: async () => {
+            setPartnerBusy(true);
+            try {
+              const response = await partnerService.unlink();
+              if (response.success) {
+                await refreshUser();
+                await loadInvites();
+                Alert.alert('Pronto', 'Vínculo desfeito');
+              } else {
+                Alert.alert('Erro', response.error || 'Não foi possível desvincular');
+              }
+            } catch (error) {
+              Alert.alert('Erro', 'Falha ao desvincular parceiro');
+            } finally {
+              setPartnerBusy(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const normalizedPrimary = useMemo(() => normalizeHex(primaryColor), [primaryColor]);
   const normalizedSecondary = useMemo(() => normalizeHex(secondaryColor), [secondaryColor]);
@@ -87,8 +217,9 @@ export const EditProfileScreen: React.FC = () => {
       Alert.alert('Atenção', 'Preencha a senha atual e a nova senha');
       return;
     }
-    if (newPassword.length < 6) {
-      Alert.alert('Atenção', 'A nova senha deve ter pelo menos 6 caracteres');
+    const newPasswordValidation = validation.newPassword(newPassword);
+    if (!newPasswordValidation.isValid) {
+      Alert.alert('Atenção', newPasswordValidation.message || 'Nova senha inválida');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -181,6 +312,94 @@ export const EditProfileScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>Informações</Text>
           <Input label="Nome de usuário" value={name} onChangeText={setName} />
           <Input label="Nome do parceiro" value={partnerName} onChangeText={setPartnerName} />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Parceiro</Text>
+          {hasPartner ? (
+            <>
+              <Text style={styles.helperText}>
+                Você está vinculado(a) a {user?.partnerName || 'seu parceiro'}.
+              </Text>
+              <TouchableOpacity
+                style={[styles.secondaryButton, { borderColor: COLORS.error }]}
+                onPress={handleUnlinkPartner}
+                disabled={partnerBusy}>
+                <Text style={[styles.secondaryButtonText, { color: COLORS.error }]}>
+                  {partnerBusy ? 'Aguarde...' : 'Desvincular parceiro'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.helperText}>
+                Convide seu parceiro pelo email. O vínculo só acontece quando o convite for
+                aceito.
+              </Text>
+              <Input
+                label="Email do parceiro"
+                value={inviteEmail}
+                onChangeText={setInviteEmail}
+                placeholder="parceiro@email.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+                onPress={handleSendInvite}
+                disabled={partnerBusy}>
+                <Text style={styles.primaryButtonText}>
+                  {partnerBusy ? 'Aguarde...' : 'Enviar convite'}
+                </Text>
+              </TouchableOpacity>
+
+              {invites.received.length > 0 && (
+                <View style={styles.inviteBlock}>
+                  <Text style={styles.inviteBlockTitle}>Convites recebidos</Text>
+                  {invites.received.map(invite => (
+                    <View key={invite.id} style={styles.inviteRow}>
+                      <View style={styles.inviteInfo}>
+                        <Text style={styles.inviteName}>{invite.fromName}</Text>
+                        <Text style={styles.inviteEmail}>{invite.fromEmail}</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.inviteAction, { backgroundColor: colors.primary }]}
+                        onPress={() => handleAcceptInvite(invite.id)}
+                        disabled={partnerBusy}>
+                        <Text style={styles.inviteActionText}>Aceitar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.inviteAction, styles.inviteActionDanger]}
+                        onPress={() => handleDeclineInvite(invite.id)}
+                        disabled={partnerBusy}>
+                        <Text style={styles.inviteActionText}>Recusar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {invites.sent.length > 0 && (
+                <View style={styles.inviteBlock}>
+                  <Text style={styles.inviteBlockTitle}>Convites enviados</Text>
+                  {invites.sent.map(invite => (
+                    <View key={invite.id} style={styles.inviteRow}>
+                      <View style={styles.inviteInfo}>
+                        <Text style={styles.inviteName}>{invite.toName}</Text>
+                        <Text style={styles.inviteEmail}>{invite.toEmail}</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.inviteAction, styles.inviteActionDanger]}
+                        onPress={() => handleCancelInvite(invite.id)}
+                        disabled={partnerBusy}>
+                        <Text style={styles.inviteActionText}>Cancelar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -365,5 +584,48 @@ const styles = StyleSheet.create({
   colorPreviewLabel: {
     color: COLORS.textSecondary,
     fontSize: 14,
+  },
+  inviteBlock: {
+    marginTop: 16,
+  },
+  inviteBlockTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  inviteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  inviteInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  inviteName: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  inviteEmail: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+  },
+  inviteAction: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  inviteActionDanger: {
+    backgroundColor: COLORS.error,
+  },
+  inviteActionText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

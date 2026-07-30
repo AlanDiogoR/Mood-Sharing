@@ -7,6 +7,7 @@ import { getStore } from '@netlify/blobs';
 import { User } from '../models/User';
 import { isServerless, uploadDir } from '../config/uploads';
 import { AuthRequest } from '../middleware/auth';
+import { detectImageType } from '../middleware/upload';
 
 const deleteFileIfExists = async (filePath: string): Promise<void> => {
   try {
@@ -39,16 +40,19 @@ const getUserPhotoStore = () => {
   return getStore('user-photos');
 };
 
-const getExtensionFromMime = (mimeType?: string): string => {
-  switch (mimeType) {
-    case 'image/png':
-      return '.png';
-    case 'image/webp':
-      return '.webp';
-    case 'image/jpeg':
-    default:
-      return '.jpg';
+const getSharedPhotoStore = () => {
+  const siteID = process.env.NETLIFY_BLOBS_SITE_ID || process.env.NETLIFY_SITE_ID;
+  const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_API_TOKEN;
+
+  if (siteID && token) {
+    return getStore({
+      name: 'shared-photos',
+      siteID,
+      token,
+    });
   }
+
+  return getStore('shared-photos');
 };
 
 const normalizeHex = (value?: string | null): string | null => {
@@ -121,9 +125,7 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
 };
 
 export const uploadUserPhoto = async (req: AuthRequest, res: Response): Promise<void> => {
-  const uploadedFilename = req.file?.filename;
-  const uploadedPath =
-    !isServerless && uploadedFilename ? path.resolve(uploadDir, uploadedFilename) : null;
+  let writtenPath: string | null = null;
 
   try {
     const userId = req.user?.userId;
@@ -132,31 +134,33 @@ export const uploadUserPhoto = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
-    if (!req.file) {
+    if (!req.file?.buffer) {
       res.status(400).json({ success: false, error: 'Arquivo não enviado' });
+      return;
+    }
+
+    // Valida o conteúdo real do arquivo (magic bytes), não o MIME declarado.
+    const detected = detectImageType(req.file.buffer);
+    if (!detected) {
+      res.status(400).json({
+        success: false,
+        error: 'Arquivo não é uma imagem válida. Use JPEG, PNG ou WEBP.',
+      });
       return;
     }
 
     const user = await User.findById(userId);
     if (!user) {
-      if (uploadedPath) {
-        await deleteFileIfExists(uploadedPath);
-      }
       res.status(404).json({ success: false, error: 'Usuário não encontrado' });
       return;
     }
 
     const previousFilename = user.photoFilename;
+    const filename = `${crypto.randomUUID()}${detected.extension}`;
+    let photoUrl: string;
 
     if (isServerless) {
-      if (!req.file?.buffer) {
-        res.status(400).json({ success: false, error: 'Arquivo inválido' });
-        return;
-      }
-
-      const extension = getExtensionFromMime(req.file.mimetype);
-      const filename = `${crypto.randomUUID()}${extension}`;
-      const photoUrl = `/api/uploads/${filename}`;
+      photoUrl = `/api/uploads/${filename}`;
       const store = getUserPhotoStore();
 
       const arrayBuffer = req.file.buffer.buffer.slice(
@@ -165,30 +169,25 @@ export const uploadUserPhoto = async (req: AuthRequest, res: Response): Promise<
       );
       await store.set(filename, arrayBuffer as unknown as any, {
         metadata: {
-          contentType: req.file.mimetype,
+          contentType: detected.mime,
         },
       });
-
-      user.photoFilename = filename;
-      user.photoUrl = photoUrl;
-      user.photoUploadedAt = new Date();
-      await user.save();
-
-      if (previousFilename) {
-        await store.delete(previousFilename);
-      }
     } else {
-      const filename = req.file.filename;
-      const photoUrl = `/uploads/${filename}`;
+      photoUrl = `/uploads/${filename}`;
+      writtenPath = path.resolve(uploadDir, filename);
+      await fs.promises.writeFile(writtenPath, req.file.buffer);
+    }
 
-      user.photoFilename = filename;
-      user.photoUrl = photoUrl;
-      user.photoUploadedAt = new Date();
-      await user.save();
+    user.photoFilename = filename;
+    user.photoUrl = photoUrl;
+    user.photoUploadedAt = new Date();
+    await user.save();
 
-      if (previousFilename) {
-        const previousPath = path.resolve(uploadDir, previousFilename);
-        await deleteFileIfExists(previousPath);
+    if (previousFilename) {
+      if (isServerless) {
+        await getUserPhotoStore().delete(previousFilename);
+      } else {
+        await deleteFileIfExists(path.resolve(uploadDir, path.basename(previousFilename)));
       }
     }
 
@@ -201,9 +200,9 @@ export const uploadUserPhoto = async (req: AuthRequest, res: Response): Promise<
     });
   } catch (error: any) {
     console.error('Erro ao enviar foto:', error);
-    if (uploadedPath) {
+    if (writtenPath) {
       try {
-        await deleteFileIfExists(uploadedPath);
+        await deleteFileIfExists(writtenPath);
       } catch (cleanupError) {
         console.error('Erro ao limpar upload após falha:', cleanupError);
       }
@@ -293,13 +292,18 @@ export const getPublicUserPhoto = async (req: Request, res: Response): Promise<v
       return;
     }
 
+    // Headers defensivos: impedem que o navegador "adivinhe" outro tipo de
+    // conteúdo ou execute o arquivo como página.
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Disposition', 'inline');
+
     if (!isServerless) {
       const filePath = path.join(uploadDir, path.basename(key));
       if (!filePath.startsWith(path.resolve(uploadDir))) {
         res.status(400).json({ success: false, error: 'Chave inválida' });
         return;
       }
-      res.sendFile(filePath, err => {
+      res.sendFile(filePath, { headers: { 'Cache-Control': 'public, max-age=86400' } }, err => {
         if (err) {
           res.status(404).json({ success: false, error: 'Foto não encontrada' });
         }
@@ -307,8 +311,11 @@ export const getPublicUserPhoto = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    const store = getUserPhotoStore();
-    const result = await store.getWithMetadata(key, { type: 'arrayBuffer' });
+    // A foto pode estar no store de fotos de perfil ou no de fotos compartilhadas.
+    let result = await getUserPhotoStore().getWithMetadata(key, { type: 'arrayBuffer' });
+    if (!result || !result.data) {
+      result = await getSharedPhotoStore().getWithMetadata(key, { type: 'arrayBuffer' });
+    }
 
     if (!result || !result.data) {
       res.status(404).json({ success: false, error: 'Foto não encontrada' });
@@ -316,10 +323,15 @@ export const getPublicUserPhoto = async (req: Request, res: Response): Promise<v
     }
 
     const metadata = result.metadata as { contentType?: string } | undefined;
-    const contentType = metadata?.contentType || 'application/octet-stream';
+    const allowedContentTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const contentType =
+      metadata?.contentType && allowedContentTypes.includes(metadata.contentType)
+        ? metadata.contentType
+        : 'application/octet-stream';
 
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    // Fotos são substituíveis/apagáveis; cache curto evita cópias eternas em CDNs.
+    res.setHeader('Cache-Control', 'public, max-age=86400');
     res.send(Buffer.from(result.data));
   } catch (error: any) {
     console.error('Erro ao buscar foto pública:', error);

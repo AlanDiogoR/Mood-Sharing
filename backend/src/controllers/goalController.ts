@@ -6,10 +6,18 @@ import { AuthRequest } from '../middleware/auth';
 const getUserId = (req: AuthRequest): string | undefined => req.user?.userId;
 
 export const validateUpdateGoals = [
-  body('items').isArray().withMessage('Items inválidos'),
-  body('items.*.id').isString().withMessage('ID inválido'),
-  body('items.*.title').isString().withMessage('Título inválido'),
-  body('items.*.category').isString().withMessage('Categoria inválida'),
+  body('items').isArray({ max: 200 }).withMessage('Items deve ser um array com no máximo 200 itens'),
+  body('items.*.id').isString().isLength({ min: 1, max: 64 }).withMessage('ID inválido'),
+  body('items.*.title')
+    .isString()
+    .trim()
+    .isLength({ min: 1, max: 200 })
+    .withMessage('Título deve ter entre 1 e 200 caracteres'),
+  body('items.*.category')
+    .isString()
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Categoria deve ter entre 1 e 100 caracteres'),
   body('items.*.completed').isBoolean().withMessage('Status inválido'),
 ];
 
